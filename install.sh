@@ -70,6 +70,12 @@ volumes:
 EOF
 echo "Wrote ${INSTALL_DIR}/docker-compose.yml"
 
+# ── Open firewall port if ufw is active ──────────────────────
+if command -v ufw &>/dev/null && ufw status | grep -q "active"; then
+  echo "Opening port ${PORT} in ufw firewall..."
+  ufw allow "${PORT}/tcp" >/dev/null
+fi
+
 # ── Pull and start containers ────────────────────────────────
 echo "Pulling latest FloodTest image and starting container..."
 cd "${INSTALL_DIR}"
