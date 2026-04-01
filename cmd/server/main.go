@@ -68,6 +68,17 @@ func main() {
 	ulEngine.SetStatsCollector(collector)
 	ulEngine.SetStatsProvider(func() int64 { return collector.CurrentRate().UploadBps })
 
+	// Initialize upload endpoint list and HTTP engine (for HTTP discard mode)
+	uploadServerList := upload.NewUploadServerList(cfg.UploadEndpoints)
+	httpUploadEngine := upload.NewHTTPEngine(
+		uploadServerList,
+		cfg.UploadConcurrency,
+		int64(cfg.UploadChunkSizeMB)*1024*1024,
+		mbpsToBps(cfg.DefaultUploadMbps),
+	)
+	httpUploadEngine.SetStatsCollector(collector)
+	httpUploadEngine.SetStatsProvider(func() int64 { return collector.CurrentRate().UploadBps })
+
 	// Track running state
 	var running atomic.Bool
 	var sessionStart time.Time
@@ -97,12 +108,19 @@ func main() {
 	detector.SetTargets(mbpsToBps(cfg.DefaultDownloadMbps), mbpsToBps(cfg.DefaultUploadMbps))
 	detector.Start(ctx)
 
+	// Port needed by startEngines for local discard mode
+	port := cfg.WebPort
+	if port == 0 {
+		port = 7860
+	}
+
 	// Engine control functions
 	startEngines := func(dlMbps, ulMbps int) error {
 		if running.Load() {
 			// Stop first
 			dlEngine.Stop()
 			ulEngine.Stop()
+			httpUploadEngine.Stop()
 		}
 
 		// Update rate limits and auto-adjust targets
@@ -119,10 +137,6 @@ func main() {
 		// Update download servers
 		serverList.UpdateServers(cfgNow.DownloadServers)
 
-		// Update upload credentials
-		ulEngine.UpdateCredentials(cfgNow.B2KeyID, cfgNow.B2AppKey, cfgNow.B2BucketName, cfgNow.B2Endpoint)
-		ulEngine.SetChunkSize(int64(cfgNow.UploadChunkSizeMB) * 1024 * 1024)
-
 		// Update throttle detector targets
 		detector.SetTargets(mbpsToBps(dlMbps), mbpsToBps(ulMbps))
 
@@ -133,16 +147,49 @@ func main() {
 		dlEngine.Start(ctx)
 		log.Printf("Download engine started: %dMbps, %d streams", dlMbps, cfgNow.DownloadConcurrency)
 
-		// Start upload engine (only if B2 is configured)
-		if cfgNow.B2KeyID != "" && cfgNow.B2AppKey != "" && cfgNow.B2BucketName != "" {
-			if err := ulEngine.Start(ctx); err != nil {
-				log.Printf("Upload engine failed to start: %v", err)
-				// Continue with download only
+		// Stop HTTP upload engine too (in case switching modes)
+		httpUploadEngine.Stop()
+
+		// Start upload engine based on mode
+		switch cfgNow.UploadMode {
+		case "s3":
+			ulEngine.UpdateCredentials(cfgNow.B2KeyID, cfgNow.B2AppKey, cfgNow.B2BucketName, cfgNow.B2Endpoint)
+			ulEngine.SetChunkSize(int64(cfgNow.UploadChunkSizeMB) * 1024 * 1024)
+			if cfgNow.B2KeyID != "" && cfgNow.B2AppKey != "" && cfgNow.B2BucketName != "" {
+				if err := ulEngine.Start(ctx); err != nil {
+					log.Printf("Upload engine (S3) failed to start: %v", err)
+				} else {
+					log.Printf("Upload engine (S3) started: %dMbps, %d streams", ulMbps, cfgNow.UploadConcurrency)
+				}
 			} else {
-				log.Printf("Upload engine started: %dMbps, %d streams", ulMbps, cfgNow.UploadConcurrency)
+				log.Println("Upload engine (S3) skipped: credentials not configured")
 			}
-		} else {
-			log.Println("Upload engine skipped: B2 not configured")
+		case "http":
+			uploadServerList.UpdateServers(cfgNow.UploadEndpoints)
+			httpUploadEngine.SetConcurrency(cfgNow.UploadConcurrency)
+			httpUploadEngine.SetChunkSize(int64(cfgNow.UploadChunkSizeMB) * 1024 * 1024)
+			httpUploadEngine.SetRateLimit(mbpsToBps(ulMbps))
+			httpUploadEngine.SetTargetBps(int64(ulMbps) * 1_000_000)
+			if err := httpUploadEngine.Start(ctx); err != nil {
+				log.Printf("Upload engine (HTTP) failed to start: %v", err)
+			} else {
+				log.Printf("Upload engine (HTTP) started: %dMbps, %d streams, %d endpoints",
+					ulMbps, cfgNow.UploadConcurrency, len(cfgNow.UploadEndpoints))
+			}
+		case "local":
+			localEndpoints := []string{fmt.Sprintf("http://localhost:%d/api/upload-sink", port)}
+			uploadServerList.UpdateServers(localEndpoints)
+			httpUploadEngine.SetConcurrency(cfgNow.UploadConcurrency)
+			httpUploadEngine.SetChunkSize(int64(cfgNow.UploadChunkSizeMB) * 1024 * 1024)
+			httpUploadEngine.SetRateLimit(mbpsToBps(ulMbps))
+			httpUploadEngine.SetTargetBps(int64(ulMbps) * 1_000_000)
+			if err := httpUploadEngine.Start(ctx); err != nil {
+				log.Printf("Upload engine (local) failed to start: %v", err)
+			} else {
+				log.Printf("Upload engine (local discard) started: %dMbps", ulMbps)
+			}
+		default:
+			log.Printf("Upload engine skipped: unknown mode %q", cfgNow.UploadMode)
 		}
 
 		running.Store(true)
@@ -156,6 +203,7 @@ func main() {
 		}
 		dlEngine.Stop()
 		ulEngine.Stop()
+		httpUploadEngine.Stop()
 		running.Store(false)
 		log.Println("Engines stopped")
 	}
@@ -199,8 +247,10 @@ func main() {
 			return dlEngine.ActiveStreams()
 		},
 		GetUploadStreams: func() int {
+			if httpUploadEngine.IsRunning() {
+				return httpUploadEngine.ActiveStreams()
+			}
 			return ulEngine.ActiveStreams()
-			return 0
 		},
 		GetSessionStart:         func() time.Time { return sessionStart },
 		GetSessionDownloadBytes: func() int64 { return collector.SessionDownloadBytes() },
@@ -242,6 +292,7 @@ func main() {
 		return upd.SetAutoUpdate(enabled, schedule)
 	}
 	app.GetUpdateHistory = func() interface{} { return upd.GetHistory() }
+	app.GetUploadServerHealth = func() interface{} { return uploadServerList.HealthStatus() }
 
 	router := api.NewRouter(app, frontend)
 
@@ -283,10 +334,6 @@ func main() {
 	}()
 
 	// Start HTTP server
-	port := cfg.WebPort
-	if port == 0 {
-		port = 7860
-	}
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: router,
