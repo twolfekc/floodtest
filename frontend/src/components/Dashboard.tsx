@@ -223,7 +223,11 @@ export default function Dashboard({ ws }: DashboardProps) {
       </div>
 
       {/* Server Health */}
-      <ServerHealth />
+      <ServerHealth
+        speedTestRunning={ws.stats.speedTestRunning}
+        speedTestCompleted={ws.stats.speedTestCompleted}
+        speedTestTotal={ws.stats.speedTestTotal}
+      />
     </div>
   )
 }
