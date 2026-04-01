@@ -386,6 +386,9 @@ func (a *App) HandleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 			cfg.UploadEndpoints = endpoints
 		}
 	}
+	if v, ok := updates["autoMode"]; ok {
+		cfg.AutoMode = fmt.Sprint(v)
+	}
 
 	if err := cfg.Save(); err != nil {
 		writeError(w, 500, err.Error())

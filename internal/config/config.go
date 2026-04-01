@@ -3,6 +3,7 @@ package config
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"sync"
@@ -15,6 +16,9 @@ const (
 	UploadModeS3    = "s3"
 	UploadModeHTTP  = "http"
 	UploadModeLocal = "local"
+
+	AutoModeReliable = "reliable"
+	AutoModeMax      = "max"
 )
 
 type Config struct {
@@ -41,6 +45,11 @@ type Config struct {
 
 	UploadMode      string   `json:"uploadMode"`      // "s3", "http", "local"
 	UploadEndpoints []string `json:"uploadEndpoints"`
+
+	AutoMode             string  `json:"autoMode"`
+	MeasuredDownloadMbps float64 `json:"measuredDownloadMbps"`
+	MeasuredUploadMbps   float64 `json:"measuredUploadMbps"`
+	LastSpeedTestTime    string  `json:"lastSpeedTestTime"`
 }
 
 // DefaultDownloadServers is the canonical server list from the download package.
@@ -65,6 +74,7 @@ func New(database *sql.DB) *Config {
 		DownloadServers:      DefaultDownloadServers,
 		UploadMode:           "http",
 		UploadEndpoints:      DefaultUploadEndpoints,
+		AutoMode:             AutoModeReliable,
 		B2KeyID:              os.Getenv("B2_KEY_ID"),
 		B2AppKey:             os.Getenv("B2_APP_KEY"),
 		B2BucketName:         os.Getenv("B2_BUCKET_NAME"),
@@ -148,6 +158,22 @@ func (c *Config) loadFromDB() {
 			c.UploadEndpoints = endpoints
 		}
 	}
+	if v, _ := db.GetSetting(c.DB, "auto_mode"); v != "" {
+		c.AutoMode = v
+	}
+	if v, _ := db.GetSetting(c.DB, "measured_download_mbps"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			c.MeasuredDownloadMbps = f
+		}
+	}
+	if v, _ := db.GetSetting(c.DB, "measured_upload_mbps"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			c.MeasuredUploadMbps = f
+		}
+	}
+	if v, _ := db.GetSetting(c.DB, "last_speed_test_time"); v != "" {
+		c.LastSpeedTestTime = v
+	}
 }
 
 func (c *Config) Save() error {
@@ -166,7 +192,11 @@ func (c *Config) Save() error {
 		"upload_chunk_size_mb":  strconv.Itoa(c.UploadChunkSizeMB),
 		"throttle_threshold_pct": strconv.Itoa(c.ThrottleThresholdPct),
 		"throttle_window_min":   strconv.Itoa(c.ThrottleWindowMin),
-		"upload_mode":           c.UploadMode,
+		"upload_mode":            c.UploadMode,
+		"auto_mode":              c.AutoMode,
+		"measured_download_mbps": fmt.Sprintf("%.1f", c.MeasuredDownloadMbps),
+		"measured_upload_mbps":   fmt.Sprintf("%.1f", c.MeasuredUploadMbps),
+		"last_speed_test_time":   c.LastSpeedTestTime,
 	}
 	serversJSON, _ := json.Marshal(c.DownloadServers)
 	pairs["download_servers"] = string(serversJSON)
