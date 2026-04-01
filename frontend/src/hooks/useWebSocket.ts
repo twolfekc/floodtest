@@ -14,6 +14,12 @@ export interface WsStats {
   speedTestRunning: boolean
   speedTestCompleted: number
   speedTestTotal: number
+  autoMode: string
+  measuredDownloadMbps: number
+  measuredUploadMbps: number
+  ispTestRunning: boolean
+  ispTestPhase: string
+  ispTestProgress: number
 }
 
 const EMPTY: WsStats = {
@@ -30,6 +36,12 @@ const EMPTY: WsStats = {
   speedTestRunning: false,
   speedTestCompleted: 0,
   speedTestTotal: 0,
+  autoMode: '',
+  measuredDownloadMbps: 0,
+  measuredUploadMbps: 0,
+  ispTestRunning: false,
+  ispTestPhase: '',
+  ispTestProgress: 0,
 }
 
 export function useWebSocket() {

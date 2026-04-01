@@ -22,6 +22,9 @@ export interface Status {
   overrideState: number
   targetDownloadMbps: number
   targetUploadMbps: number
+  autoMode: string
+  measuredDownloadMbps: number
+  measuredUploadMbps: number
 }
 
 export interface HistoryPoint {
@@ -96,6 +99,13 @@ export interface SpeedTestResult {
   speedBps: number
   error?: string
   ok: boolean
+}
+
+export interface ISPSpeedTestResult {
+  downloadMbps: number
+  uploadMbps: number
+  timestamp: string
+  streams: number
 }
 
 export interface UploadServerHealth {
@@ -176,6 +186,7 @@ export const api = {
   getServerHealth: () => request<ServerHealth[]>('/api/server-health'),
   runSpeedTest: () => request<SpeedTestResult[]>('/api/speed-test', { method: 'POST' }),
   getUploadServerHealth: () => request<UploadServerHealth[]>('/api/upload-server-health'),
+  runISPSpeedTest: () => request<ISPSpeedTestResult>('/api/isp-speed-test', { method: 'POST' }),
 
   // Updates
   getUpdateStatus: () => request<UpdateStatus>('/api/updates/status'),
