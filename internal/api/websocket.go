@@ -22,9 +22,15 @@ type WsMessage struct {
 	SessionUploadBytes   int64 `json:"sessionUploadBytes"`
 	HealthyServers       int   `json:"healthyServers"`
 	TotalServers         int   `json:"totalServers"`
-	SpeedTestRunning     bool  `json:"speedTestRunning,omitempty"`
-	SpeedTestCompleted   int   `json:"speedTestCompleted,omitempty"`
-	SpeedTestTotal       int   `json:"speedTestTotal,omitempty"`
+	SpeedTestRunning     bool    `json:"speedTestRunning,omitempty"`
+	SpeedTestCompleted   int     `json:"speedTestCompleted,omitempty"`
+	SpeedTestTotal       int     `json:"speedTestTotal,omitempty"`
+	AutoMode             string  `json:"autoMode,omitempty"`
+	MeasuredDownloadMbps float64 `json:"measuredDownloadMbps,omitempty"`
+	MeasuredUploadMbps   float64 `json:"measuredUploadMbps,omitempty"`
+	ISPTestRunning       bool    `json:"ispTestRunning,omitempty"`
+	ISPTestPhase         string  `json:"ispTestPhase,omitempty"`
+	ISPTestProgress      int     `json:"ispTestProgress,omitempty"`
 }
 
 type WsHub struct {

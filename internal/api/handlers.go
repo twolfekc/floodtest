@@ -36,6 +36,7 @@ type App struct {
 	GetServerHealth         func() interface{}
 	GetUploadServerHealth   func() interface{}
 	RunSpeedTest            func(ctx context.Context) interface{}
+	RunISPSpeedTest         func(ctx context.Context) (interface{}, error)
 	GetUpdateStatus         func() interface{}
 	CheckForUpdate          func(ctx context.Context) (interface{}, error)
 	ApplyUpdate             func(ctx context.Context) error
@@ -84,15 +85,18 @@ func (a *App) HandleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]interface{}{
-		"running":            running,
-		"downloadBps":        dlBps,
-		"uploadBps":          ulBps,
-		"downloadStreams":     dlStreams,
-		"uploadStreams":       ulStreams,
-		"uptimeSeconds":      uptimeSeconds,
-		"overrideState":      a.Scheduler.GetOverrideState(),
-		"targetDownloadMbps": cfg.DefaultDownloadMbps,
-		"targetUploadMbps":   cfg.DefaultUploadMbps,
+		"running":              running,
+		"downloadBps":          dlBps,
+		"uploadBps":            ulBps,
+		"downloadStreams":       dlStreams,
+		"uploadStreams":         ulStreams,
+		"uptimeSeconds":        uptimeSeconds,
+		"overrideState":        a.Scheduler.GetOverrideState(),
+		"targetDownloadMbps":   cfg.DefaultDownloadMbps,
+		"targetUploadMbps":     cfg.DefaultUploadMbps,
+		"autoMode":             cfg.AutoMode,
+		"measuredDownloadMbps": cfg.MeasuredDownloadMbps,
+		"measuredUploadMbps":   cfg.MeasuredUploadMbps,
 	})
 }
 
@@ -451,6 +455,19 @@ func (a *App) HandleSpeedTest(w http.ResponseWriter, r *http.Request) {
 	}
 	results := a.RunSpeedTest(r.Context())
 	writeJSON(w, results)
+}
+
+func (a *App) HandleISPSpeedTest(w http.ResponseWriter, r *http.Request) {
+	if a.RunISPSpeedTest == nil {
+		writeError(w, 503, "ISP speed test not available")
+		return
+	}
+	result, err := a.RunISPSpeedTest(r.Context())
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, result)
 }
 
 func (a *App) HandleSetupRequired(w http.ResponseWriter, r *http.Request) {
