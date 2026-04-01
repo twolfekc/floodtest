@@ -10,6 +10,14 @@ curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/install.sh 
 
 This installs Docker (if needed) and starts FloodTest on port **7860**. Open `http://your-server:7860` to configure.
 
+## Update
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/update.sh | sudo bash
+```
+
+Pulls the latest image and restarts the container. Your settings, schedules, and history are preserved.
+
 ## Manual Install
 
 If you already have Docker and Docker Compose:
