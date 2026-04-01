@@ -67,7 +67,7 @@ func New(database *sql.DB) *Config {
 		DefaultUploadMbps:    envInt("DEFAULT_UPLOAD_SPEED", 5000),
 		DownloadConcurrency:  8,
 		UploadConcurrency:    4,
-		UploadChunkSizeMB:    500,
+		UploadChunkSizeMB:    10,
 		ThrottleThresholdPct: 60,
 		ThrottleWindowMin:    5,
 		DownloadServers:      DefaultDownloadServers,

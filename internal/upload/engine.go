@@ -281,16 +281,21 @@ func (e *Engine) uploadLoop(ctx context.Context) {
 			continue
 		}
 
-		// Immediately delete the object to avoid storage charges.
-		_, err = e.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
-			Bucket: aws.String(e.bucketName),
-			Key:    aws.String(objectKey),
-		})
-		if err != nil {
+		// Delete the object immediately to avoid storage charges.
+		// Retry up to 3 times — failed deletes accumulate storage.
+		for attempt := 0; attempt < 3; attempt++ {
+			_, err = e.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+				Bucket: aws.String(e.bucketName),
+				Key:    aws.String(objectKey),
+			})
+			if err == nil {
+				break
+			}
 			if ctx.Err() != nil {
 				return
 			}
-			log.Printf("upload: DeleteObject error for %s: %v", objectKey, err)
+			log.Printf("upload: DeleteObject retry %d for %s: %v", attempt+1, objectKey, err)
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
