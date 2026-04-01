@@ -11,6 +11,9 @@ export interface WsStats {
   sessionUploadBytes: number
   healthyServers: number
   totalServers: number
+  speedTestRunning: boolean
+  speedTestCompleted: number
+  speedTestTotal: number
 }
 
 const EMPTY: WsStats = {
@@ -24,6 +27,9 @@ const EMPTY: WsStats = {
   sessionUploadBytes: 0,
   healthyServers: 0,
   totalServers: 0,
+  speedTestRunning: false,
+  speedTestCompleted: 0,
+  speedTestTotal: 0,
 }
 
 export function useWebSocket() {

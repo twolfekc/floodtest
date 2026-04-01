@@ -74,6 +74,7 @@ export interface Settings {
 
 export interface ServerHealth {
   url: string
+  location: string
   healthy: boolean
   consecutiveFailures: number
   totalFailures: number
@@ -82,6 +83,17 @@ export interface ServerHealth {
   lastErrorTime?: string
   unhealthyUntil?: string
   bytesDownloaded: number
+  speedBps: number
+  activeStreams: number
+  status: string
+}
+
+export interface SpeedTestResult {
+  url: string
+  location: string
+  speedBps: number
+  error?: string
+  ok: boolean
 }
 
 export interface UpdateStatus {
@@ -143,6 +155,7 @@ export const api = {
   testB2: () => request<{ success: boolean; message: string }>('/api/settings/test-b2', { method: 'POST' }),
   isSetupRequired: () => request<{ required: boolean }>('/api/settings/setup-required'),
   getServerHealth: () => request<ServerHealth[]>('/api/server-health'),
+  runSpeedTest: () => request<SpeedTestResult[]>('/api/speed-test', { method: 'POST' }),
 
   // Updates
   getUpdateStatus: () => request<UpdateStatus>('/api/updates/status'),
