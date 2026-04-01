@@ -28,12 +28,16 @@ type Engine struct {
 	s3Client       *s3.Client
 	bucketName     string
 	concurrency    int
+	maxConcurrency int
 	chunkSizeBytes int64
 	rateLimitBps   atomic.Int64 // 0 = unlimited
+	targetBps      atomic.Int64 // target throughput in bits/sec
+	activeStreams  atomic.Int32
 	running        atomic.Bool
 	cancel         context.CancelFunc
 	wg             sync.WaitGroup
 	stats          StatsCollector
+	statsProvider  func() int64
 
 	// Credentials stored for (re-)creating the S3 client on Start.
 	mu       sync.Mutex
@@ -49,6 +53,7 @@ func New(keyID, appKey, bucket, endpoint string, concurrency int, chunkSizeBytes
 	e := &Engine{
 		bucketName:     bucket,
 		concurrency:    concurrency,
+		maxConcurrency: 32,
 		chunkSizeBytes: chunkSizeBytes,
 		keyID:          keyID,
 		appKey:         appKey,
@@ -62,6 +67,23 @@ func New(keyID, appKey, bucket, endpoint string, concurrency int, chunkSizeBytes
 // SetStatsCollector assigns the collector that receives upload byte counts.
 func (e *Engine) SetStatsCollector(c StatsCollector) {
 	e.stats = c
+}
+
+// SetStatsProvider sets a function returning current upload bps for auto-adjust.
+func (e *Engine) SetStatsProvider(fn func() int64) {
+	e.mu.Lock()
+	e.statsProvider = fn
+	e.mu.Unlock()
+}
+
+// SetTargetBps sets the target throughput in bits/sec for auto-adjustment.
+func (e *Engine) SetTargetBps(bps int64) {
+	e.targetBps.Store(bps)
+}
+
+// ActiveStreams returns the current number of running upload goroutines.
+func (e *Engine) ActiveStreams() int {
+	return int(e.activeStreams.Load())
 }
 
 // Start creates the S3 client and launches upload goroutines.
@@ -89,14 +111,29 @@ func (e *Engine) Start(ctx context.Context) error {
 	e.cancel = cancel
 	e.running.Store(true)
 
+	e.activeStreams.Store(0)
 	for i := 0; i < e.concurrency; i++ {
-		e.wg.Add(1)
-		go func() {
-			defer e.wg.Done()
-			e.uploadLoop(childCtx)
-		}()
+		e.launchStream(childCtx)
 	}
+
+	// Auto-adjust goroutine
+	e.wg.Add(1)
+	go func() {
+		defer e.wg.Done()
+		e.autoAdjust(childCtx)
+	}()
+
 	return nil
+}
+
+func (e *Engine) launchStream(ctx context.Context) {
+	e.wg.Add(1)
+	e.activeStreams.Add(1)
+	go func() {
+		defer e.wg.Done()
+		defer e.activeStreams.Add(-1)
+		e.uploadLoop(ctx)
+	}()
 }
 
 // Stop cancels all upload goroutines and waits for them to finish.
@@ -106,6 +143,7 @@ func (e *Engine) Stop() {
 	}
 	e.wg.Wait()
 	e.running.Store(false)
+	e.activeStreams.Store(0)
 }
 
 // IsRunning reports whether the engine is currently active.
@@ -269,4 +307,40 @@ func (cr *CountingReader) Read(p []byte) (int, error) {
 		cr.stats.AddUploadBytes(int64(n))
 	}
 	return n, err
+}
+
+// autoAdjust monitors throughput and adds streams if below target.
+func (e *Engine) autoAdjust(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			e.mu.Lock()
+			provider := e.statsProvider
+			maxConc := e.maxConcurrency
+			e.mu.Unlock()
+
+			if provider == nil {
+				continue
+			}
+
+			target := e.targetBps.Load()
+			if target <= 0 {
+				continue
+			}
+
+			current := provider()
+			active := int(e.activeStreams.Load())
+
+			if current < target*80/100 && active < maxConc {
+				e.launchStream(ctx)
+				log.Printf("upload auto-adjust: added stream (now %d, current=%dMbps, target=%dMbps)",
+					e.activeStreams.Load(), current/1_000_000, target/1_000_000)
+			}
+		}
+	}
 }

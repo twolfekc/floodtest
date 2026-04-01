@@ -56,6 +56,7 @@ func main() {
 	serverList := download.NewServerList(cfg.DownloadServers)
 	dlEngine := download.New(serverList, cfg.DownloadConcurrency, mbpsToBps(cfg.DefaultDownloadMbps))
 	dlEngine.SetStatsCollector(collector)
+	dlEngine.SetStatsProvider(func() int64 { return collector.CurrentRate().DownloadBps })
 
 	// Initialize upload engine
 	ulEngine := upload.New(
@@ -65,6 +66,7 @@ func main() {
 		mbpsToBps(cfg.DefaultUploadMbps),
 	)
 	ulEngine.SetStatsCollector(collector)
+	ulEngine.SetStatsProvider(func() int64 { return collector.CurrentRate().UploadBps })
 
 	// Track running state
 	var running atomic.Bool
@@ -100,9 +102,11 @@ func main() {
 			ulEngine.Stop()
 		}
 
-		// Update rate limits
+		// Update rate limits and auto-adjust targets
 		dlEngine.SetRateLimit(mbpsToBps(dlMbps))
+		dlEngine.SetTargetBps(int64(dlMbps) * 1_000_000) // target in bits/sec
 		ulEngine.SetRateLimit(mbpsToBps(ulMbps))
+		ulEngine.SetTargetBps(int64(ulMbps) * 1_000_000)
 
 		// Update concurrency from config
 		cfgNow := cfg.Get()
@@ -189,15 +193,10 @@ func main() {
 		OnStop:    stopEngines,
 		IsRunning: func() bool { return running.Load() },
 		GetDownloadStreams: func() int {
-			if dlEngine.IsRunning() {
-				return cfg.Get().DownloadConcurrency
-			}
-			return 0
+			return dlEngine.ActiveStreams()
 		},
 		GetUploadStreams: func() int {
-			if ulEngine.IsRunning() {
-				return cfg.Get().UploadConcurrency
-			}
+			return ulEngine.ActiveStreams()
 			return 0
 		},
 		GetSessionStart:         func() time.Time { return sessionStart },

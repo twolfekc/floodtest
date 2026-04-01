@@ -165,8 +165,9 @@ func (sl *ServerList) MarkUnhealthy(url string, errMsg string) {
 	}
 }
 
-// MarkSuccess records a successful download from a server.
-func (sl *ServerList) MarkSuccess(url string, bytesRead int64) {
+// MarkSuccess records a successful download completion from a server.
+// Bytes are already counted incrementally via AddBytes, so only increment the counter.
+func (sl *ServerList) MarkSuccess(url string) {
 	sl.mu.Lock()
 	defer sl.mu.Unlock()
 
@@ -174,7 +175,19 @@ func (sl *ServerList) MarkSuccess(url string, bytesRead int64) {
 		if sl.servers[i].URL == url {
 			sl.servers[i].consecutiveFailures = 0
 			sl.servers[i].totalDownloads++
-			sl.servers[i].bytesDownloaded += bytesRead
+			return
+		}
+	}
+}
+
+// AddBytes incrementally updates the bytes downloaded counter for a server.
+// Called during streaming to provide real-time progress in the health UI.
+func (sl *ServerList) AddBytes(url string, n int64) {
+	sl.mu.Lock()
+	defer sl.mu.Unlock()
+	for i := range sl.servers {
+		if sl.servers[i].URL == url {
+			sl.servers[i].bytesDownloaded += n
 			return
 		}
 	}

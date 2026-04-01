@@ -28,14 +28,18 @@ type StatsCollector interface {
 
 // Engine drives parallel HTTP download streams to saturate WAN bandwidth.
 type Engine struct {
-	serverList   *ServerList
-	stats        atomic.Value // holds StatsCollector (may be nil)
-	concurrency  int
-	rateLimitBps atomic.Int64 // 0 = unlimited
-	running      atomic.Bool
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
-	mu           sync.Mutex // guards concurrency and cancel
+	serverList     *ServerList
+	stats          atomic.Value // holds StatsCollector (may be nil)
+	concurrency    int
+	maxConcurrency int
+	rateLimitBps   atomic.Int64 // 0 = unlimited
+	targetBps      atomic.Int64 // target throughput in bits/sec for auto-adjust
+	activeStreams  atomic.Int32 // live count of running goroutines
+	running        atomic.Bool
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
+	mu             sync.Mutex // guards concurrency and cancel
+	statsProvider  func() int64 // returns current download bps
 }
 
 // New creates a download Engine.
@@ -44,11 +48,30 @@ type Engine struct {
 // rateLimitBps is the aggregate rate limit in bytes/sec (0 = unlimited).
 func New(serverList *ServerList, concurrency int, rateLimitBps int64) *Engine {
 	e := &Engine{
-		serverList:  serverList,
-		concurrency: concurrency,
+		serverList:     serverList,
+		concurrency:    concurrency,
+		maxConcurrency: 64,
 	}
 	e.rateLimitBps.Store(rateLimitBps)
 	return e
+}
+
+// SetStatsProvider sets a function that returns current download throughput in bps.
+// Used by the auto-adjust goroutine to decide when to add streams.
+func (e *Engine) SetStatsProvider(fn func() int64) {
+	e.mu.Lock()
+	e.statsProvider = fn
+	e.mu.Unlock()
+}
+
+// SetTargetBps sets the target throughput in bits/sec for auto-adjustment.
+func (e *Engine) SetTargetBps(bps int64) {
+	e.targetBps.Store(bps)
+}
+
+// ActiveStreams returns the current number of running download goroutines.
+func (e *Engine) ActiveStreams() int {
+	return int(e.activeStreams.Load())
 }
 
 // SetStatsCollector attaches a stats collector that receives byte counts.
@@ -69,15 +92,30 @@ func (e *Engine) Start(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
 	e.running.Store(true)
+	e.activeStreams.Store(0)
 
 	conc := e.concurrency
 	for i := 0; i < conc; i++ {
-		e.wg.Add(1)
-		go func() {
-			defer e.wg.Done()
-			e.downloadLoop(ctx, conc)
-		}()
+		e.launchStream(ctx)
 	}
+
+	// Auto-adjust goroutine
+	e.wg.Add(1)
+	go func() {
+		defer e.wg.Done()
+		e.autoAdjust(ctx)
+	}()
+}
+
+// launchStream starts a single download goroutine.
+func (e *Engine) launchStream(ctx context.Context) {
+	e.wg.Add(1)
+	e.activeStreams.Add(1)
+	go func() {
+		defer e.wg.Done()
+		defer e.activeStreams.Add(-1)
+		e.downloadLoop(ctx, int(e.activeStreams.Load()))
+	}()
 }
 
 // Stop cancels all in-flight downloads and waits for every goroutine to exit.
@@ -91,6 +129,7 @@ func (e *Engine) Stop() {
 	}
 	e.wg.Wait()
 	e.running.Store(false)
+	e.activeStreams.Store(0)
 }
 
 // IsRunning reports whether the engine is actively downloading.
@@ -150,7 +189,7 @@ func (e *Engine) downloadLoop(ctx context.Context, totalWorkers int) {
 			}
 		}
 
-		bytesRead, err := e.downloadFrom(ctx, client, serverURL, buf, totalWorkers)
+		_, err := e.downloadFrom(ctx, client, serverURL, buf, totalWorkers)
 		if err != nil {
 			if ctx.Err() != nil {
 				return // shutting down, not a server error
@@ -164,7 +203,7 @@ func (e *Engine) downloadLoop(ctx context.Context, totalWorkers int) {
 			}
 		} else {
 			// Completed successfully (EOF)
-			e.serverList.MarkSuccess(serverURL, bytesRead)
+			e.serverList.MarkSuccess(serverURL)
 		}
 	}
 }
@@ -232,6 +271,8 @@ func (e *Engine) downloadFrom(ctx context.Context, client *http.Client, serverUR
 					sc.AddDownloadBytes(int64(n))
 				}
 			}
+			// Update per-server byte counter for health UI.
+			e.serverList.AddBytes(serverURL, int64(n))
 		}
 
 		if readErr != nil {
@@ -239,6 +280,43 @@ func (e *Engine) downloadFrom(ctx context.Context, client *http.Client, serverUR
 				return totalRead, nil // finished; caller will loop back for a new download
 			}
 			return totalRead, fmt.Errorf("reading body: %w", readErr)
+		}
+	}
+}
+
+// autoAdjust monitors throughput and adds streams if below target.
+func (e *Engine) autoAdjust(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			e.mu.Lock()
+			provider := e.statsProvider
+			maxConc := e.maxConcurrency
+			e.mu.Unlock()
+
+			if provider == nil {
+				continue
+			}
+
+			target := e.targetBps.Load()
+			if target <= 0 {
+				continue
+			}
+
+			current := provider()
+			active := int(e.activeStreams.Load())
+
+			// If below 80% of target and room for more streams, add one
+			if current < target*80/100 && active < maxConc {
+				e.launchStream(ctx)
+				log.Printf("download auto-adjust: added stream (now %d, current=%dMbps, target=%dMbps)",
+					e.activeStreams.Load(), current/1_000_000, target/1_000_000)
+			}
 		}
 	}
 }
