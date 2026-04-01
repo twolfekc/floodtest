@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"wansaturator/internal/db"
+	"wansaturator/internal/download"
 )
 
 type Config struct {
@@ -33,31 +34,8 @@ type Config struct {
 	DownloadServers []string `json:"downloadServers"`
 }
 
-// DefaultDownloadServers matches download.DefaultServers — keep in sync.
-var DefaultDownloadServers = []string{
-	"http://speed.hetzner.de/10GB.bin",
-	"http://fsn1-speed.hetzner.com/10GB.bin",
-	"http://nbg1-speed.hetzner.com/10GB.bin",
-	"http://hel1-speed.hetzner.com/10GB.bin",
-	"http://ash-speed.hetzner.com/10GB.bin",
-	"http://sin-speed.hetzner.com/10GB.bin",
-	"http://speedtest.belwue.net/10G",
-	"http://speedtest.tele2.net/10GB.zip",
-	"http://proof.ovh.net/files/10Gb.dat",
-	"http://ping.online.net/10000Mo.dat",
-	"http://scaleway.testdebit.info/10G.iso",
-	"http://speedtest.serverius.net/files/10000mb.bin",
-	"http://lax-ca-us-ping.vultr.com/vultr.com.1000MB.bin",
-	"http://nj-us-ping.vultr.com/vultr.com.1000MB.bin",
-	"http://ams-nl-ping.vultr.com/vultr.com.1000MB.bin",
-	"http://fra-de-ping.vultr.com/vultr.com.1000MB.bin",
-	"http://par-fr-ping.vultr.com/vultr.com.1000MB.bin",
-	"http://sgp-ping.vultr.com/vultr.com.1000MB.bin",
-	"http://hnd-jp-ping.vultr.com/vultr.com.1000MB.bin",
-	"http://syd-au-ping.vultr.com/vultr.com.1000MB.bin",
-	"http://cachefly.cachefly.net/200mb.test",
-	"http://ipv4.download.thinkbroadband.com/1GB.zip",
-}
+// DefaultDownloadServers is the canonical server list from the download package.
+var DefaultDownloadServers = download.DefaultServers
 
 func New(database *sql.DB) *Config {
 	c := &Config{
@@ -137,7 +115,12 @@ func (c *Config) loadFromDB() {
 	if v, _ := db.GetSetting(c.DB, "download_servers"); v != "" {
 		var servers []string
 		if json.Unmarshal([]byte(v), &servers) == nil && len(servers) > 0 {
-			c.DownloadServers = servers
+			// If the saved list is the old default (22 servers), upgrade to the new defaults.
+			if len(servers) == 22 && servers[0] == "http://speed.hetzner.de/10GB.bin" {
+				c.DownloadServers = DefaultDownloadServers
+			} else {
+				c.DownloadServers = servers
+			}
 		}
 	}
 }
