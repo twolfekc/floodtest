@@ -1,0 +1,272 @@
+package upload
+
+import (
+	"context"
+	"crypto/rand"
+	"fmt"
+	"io"
+	"log"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/google/uuid"
+	"golang.org/x/time/rate"
+)
+
+// StatsCollector receives byte-count updates from the upload engine.
+type StatsCollector interface {
+	AddUploadBytes(n int64)
+}
+
+// Engine generates random data and uploads it to Backblaze B2 via the
+// S3-compatible API, then immediately deletes the uploaded objects.
+type Engine struct {
+	s3Client       *s3.Client
+	bucketName     string
+	concurrency    int
+	chunkSizeBytes int64
+	rateLimitBps   atomic.Int64 // 0 = unlimited
+	running        atomic.Bool
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
+	stats          StatsCollector
+
+	// Credentials stored for (re-)creating the S3 client on Start.
+	mu       sync.Mutex
+	keyID    string
+	appKey   string
+	endpoint string
+	bucket   string
+}
+
+// New creates an Engine but does NOT establish an S3 connection yet.
+// Call Start to create the client and begin uploading.
+func New(keyID, appKey, bucket, endpoint string, concurrency int, chunkSizeBytes int64, rateLimitBps int64) *Engine {
+	e := &Engine{
+		bucketName:     bucket,
+		concurrency:    concurrency,
+		chunkSizeBytes: chunkSizeBytes,
+		keyID:          keyID,
+		appKey:         appKey,
+		endpoint:       endpoint,
+		bucket:         bucket,
+	}
+	e.rateLimitBps.Store(rateLimitBps)
+	return e
+}
+
+// SetStatsCollector assigns the collector that receives upload byte counts.
+func (e *Engine) SetStatsCollector(c StatsCollector) {
+	e.stats = c
+}
+
+// Start creates the S3 client and launches upload goroutines.
+func (e *Engine) Start(ctx context.Context) error {
+	e.mu.Lock()
+	keyID := e.keyID
+	appKey := e.appKey
+	endpoint := e.endpoint
+	bucket := e.bucket
+	e.mu.Unlock()
+
+	client, err := CreateS3Client(keyID, appKey, endpoint)
+	if err != nil {
+		return fmt.Errorf("create S3 client: %w", err)
+	}
+	e.s3Client = client
+	e.bucketName = bucket
+
+	// Run startup cleanup of orphaned objects from previous runs.
+	if err := Cleanup(ctx, e.s3Client, e.bucketName); err != nil {
+		log.Printf("upload: cleanup warning: %v", err)
+	}
+
+	childCtx, cancel := context.WithCancel(ctx)
+	e.cancel = cancel
+	e.running.Store(true)
+
+	for i := 0; i < e.concurrency; i++ {
+		e.wg.Add(1)
+		go func() {
+			defer e.wg.Done()
+			e.uploadLoop(childCtx)
+		}()
+	}
+	return nil
+}
+
+// Stop cancels all upload goroutines and waits for them to finish.
+func (e *Engine) Stop() {
+	if e.cancel != nil {
+		e.cancel()
+	}
+	e.wg.Wait()
+	e.running.Store(false)
+}
+
+// IsRunning reports whether the engine is currently active.
+func (e *Engine) IsRunning() bool {
+	return e.running.Load()
+}
+
+// SetRateLimit changes the aggregate rate limit (bytes/sec). 0 = unlimited.
+func (e *Engine) SetRateLimit(bps int64) {
+	e.rateLimitBps.Store(bps)
+}
+
+// SetConcurrency stores a new concurrency value that takes effect on the next Start.
+func (e *Engine) SetConcurrency(n int) {
+	e.mu.Lock()
+	e.concurrency = n
+	e.mu.Unlock()
+}
+
+// SetChunkSize updates the upload chunk size in bytes. Takes effect on next upload iteration.
+func (e *Engine) SetChunkSize(bytes int64) {
+	e.mu.Lock()
+	e.chunkSizeBytes = bytes
+	e.mu.Unlock()
+}
+
+// UpdateCredentials stores new B2 credentials that take effect on the next Start.
+func (e *Engine) UpdateCredentials(keyID, appKey, bucket, endpoint string) {
+	e.mu.Lock()
+	e.keyID = keyID
+	e.appKey = appKey
+	e.bucket = bucket
+	e.endpoint = endpoint
+	e.mu.Unlock()
+}
+
+// CreateS3Client builds an S3 client pointing at the given B2 endpoint.
+func CreateS3Client(keyID, appKey, endpoint string) (*s3.Client, error) {
+	client := s3.New(s3.Options{
+		Region: "us-west-004",
+		BaseEndpoint: aws.String(endpoint),
+		Credentials:  credentials.NewStaticCredentialsProvider(keyID, appKey, ""),
+		UsePathStyle: true,
+	})
+	return client, nil
+}
+
+// uploadLoop repeatedly generates random data, uploads it, and deletes
+// the resulting object until the context is cancelled.
+func (e *Engine) uploadLoop(ctx context.Context) {
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+
+		objectKey := fmt.Sprintf("wan-test/%s", uuid.New().String())
+
+		pr, pw := io.Pipe()
+
+		// Determine per-stream rate limit.
+		totalBps := e.rateLimitBps.Load()
+		e.mu.Lock()
+		conc := e.concurrency
+		e.mu.Unlock()
+
+		var limiter *rate.Limiter
+		if totalBps > 0 && conc > 0 {
+			perStream := totalBps / int64(conc)
+			if perStream < 1 {
+				perStream = 1
+			}
+			// Allow bursts of up to 256KB.
+			burst := int(perStream)
+			if burst > 256*1024 {
+				burst = 256 * 1024
+			}
+			limiter = rate.NewLimiter(rate.Limit(perStream), burst)
+		}
+
+		chunkSize := e.chunkSizeBytes
+
+		// Writer goroutine: push random data into the pipe.
+		go func() {
+			defer pw.Close()
+			buf := make([]byte, 256*1024) // 256KB write buffer
+			var written int64
+			for written < chunkSize {
+				if ctx.Err() != nil {
+					return
+				}
+
+				toWrite := int64(len(buf))
+				if remaining := chunkSize - written; remaining < toWrite {
+					toWrite = remaining
+				}
+
+				n, err := rand.Read(buf[:toWrite])
+				if err != nil {
+					pw.CloseWithError(fmt.Errorf("rand read: %w", err))
+					return
+				}
+
+				// Apply rate limiting if configured.
+				if limiter != nil {
+					if err := limiter.WaitN(ctx, n); err != nil {
+						return
+					}
+				}
+
+				nn, err := pw.Write(buf[:n])
+				if err != nil {
+					return
+				}
+				written += int64(nn)
+			}
+		}()
+
+		// Wrap the reader so we can count bytes as they are consumed.
+		reader := &CountingReader{r: pr, stats: e.stats}
+
+		_, err := e.s3Client.PutObject(ctx, &s3.PutObjectInput{
+			Bucket:        aws.String(e.bucketName),
+			Key:           aws.String(objectKey),
+			Body:          reader,
+			ContentLength: aws.Int64(chunkSize),
+		})
+		if err != nil {
+			// Drain the pipe so the writer goroutine can exit.
+			pr.CloseWithError(err)
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("upload: PutObject error: %v", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		// Immediately delete the object to avoid storage charges.
+		_, err = e.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(e.bucketName),
+			Key:    aws.String(objectKey),
+		})
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("upload: DeleteObject error for %s: %v", objectKey, err)
+		}
+	}
+}
+
+// CountingReader wraps an io.Reader and reports bytes read to a StatsCollector.
+type CountingReader struct {
+	r     io.Reader
+	stats StatsCollector
+}
+
+func (cr *CountingReader) Read(p []byte) (int, error) {
+	n, err := cr.r.Read(p)
+	if n > 0 && cr.stats != nil {
+		cr.stats.AddUploadBytes(int64(n))
+	}
+	return n, err
+}

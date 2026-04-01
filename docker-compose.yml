@@ -1,0 +1,21 @@
+services:
+  floodtest:
+    build: .
+    container_name: floodtest
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-7860}:7860"
+    volumes:
+      - floodtest-data:/data
+    environment:
+      - B2_KEY_ID=${B2_KEY_ID:-}
+      - B2_APP_KEY=${B2_APP_KEY:-}
+      - B2_BUCKET_NAME=${B2_BUCKET_NAME:-}
+      - B2_ENDPOINT=${B2_ENDPOINT:-}
+      - WEB_PORT=${WEB_PORT:-7860}
+      - DEFAULT_DOWNLOAD_SPEED=${DEFAULT_DOWNLOAD_SPEED:-5000}
+      - DEFAULT_UPLOAD_SPEED=${DEFAULT_UPLOAD_SPEED:-5000}
+      - DATA_DIR=/data
+
+volumes:
+  floodtest-data:
