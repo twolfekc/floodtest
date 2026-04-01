@@ -33,6 +33,7 @@ type App struct {
 	GetCurrentUploadBps     func() int64
 	TestB2Connection        func(keyID, appKey, bucket, endpoint string) (bool, string)
 	GetServerHealth         func() interface{}
+	RunSpeedTest            func(ctx context.Context) interface{}
 	GetUpdateStatus         func() interface{}
 	CheckForUpdate          func(ctx context.Context) (interface{}, error)
 	ApplyUpdate             func(ctx context.Context) error
@@ -410,6 +411,15 @@ func (a *App) HandleServerHealth(w http.ResponseWriter, r *http.Request) {
 	} else {
 		writeJSON(w, []struct{}{})
 	}
+}
+
+func (a *App) HandleSpeedTest(w http.ResponseWriter, r *http.Request) {
+	if a.RunSpeedTest == nil {
+		writeError(w, 503, "speed test not available")
+		return
+	}
+	results := a.RunSpeedTest(r.Context())
+	writeJSON(w, results)
 }
 
 func (a *App) HandleSetupRequired(w http.ResponseWriter, r *http.Request) {

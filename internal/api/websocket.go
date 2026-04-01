@@ -22,6 +22,9 @@ type WsMessage struct {
 	SessionUploadBytes   int64 `json:"sessionUploadBytes"`
 	HealthyServers       int   `json:"healthyServers"`
 	TotalServers         int   `json:"totalServers"`
+	SpeedTestRunning     bool  `json:"speedTestRunning,omitempty"`
+	SpeedTestCompleted   int   `json:"speedTestCompleted,omitempty"`
+	SpeedTestTotal       int   `json:"speedTestTotal,omitempty"`
 }
 
 type WsHub struct {

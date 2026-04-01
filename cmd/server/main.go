@@ -71,6 +71,9 @@ func main() {
 	// Track running state
 	var running atomic.Bool
 	var sessionStart time.Time
+	var speedTestRunning atomic.Bool
+	var speedTestCompleted atomic.Int32
+	var speedTestTotal atomic.Int32
 	ctx, rootCancel := context.WithCancel(context.Background())
 	defer rootCancel()
 
@@ -205,6 +208,13 @@ func main() {
 		GetCurrentDownloadBps:   func() int64 { return collector.CurrentRate().DownloadBps },
 		GetCurrentUploadBps:     func() int64 { return collector.CurrentRate().UploadBps },
 		GetServerHealth: func() interface{} { return serverList.HealthStatus() },
+		RunSpeedTest: func(ctx context.Context) interface{} {
+			return serverList.RunSpeedTest(ctx, func(p download.SpeedTestProgress) {
+				speedTestRunning.Store(p.Running)
+				speedTestCompleted.Store(int32(p.Completed))
+				speedTestTotal.Store(int32(p.Total))
+			})
+		},
 		TestB2Connection: func(keyID, appKey, bucket, endpoint string) (bool, string) {
 			client, err := upload.CreateS3Client(keyID, appKey, endpoint)
 			if err != nil {
@@ -264,6 +274,9 @@ func main() {
 					SessionUploadBytes:   collector.SessionUploadBytes(),
 					HealthyServers:       serverList.HealthyCount(),
 					TotalServers:         serverList.TotalCount(),
+					SpeedTestRunning:     speedTestRunning.Load(),
+					SpeedTestCompleted:   int(speedTestCompleted.Load()),
+					SpeedTestTotal:       int(speedTestTotal.Load()),
 				})
 			}
 		}

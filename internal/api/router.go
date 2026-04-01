@@ -27,6 +27,7 @@ func NewRouter(app *App, frontend embed.FS) http.Handler {
 	mux.HandleFunc("POST /api/settings/test-b2", app.HandleTestB2)
 	mux.HandleFunc("GET /api/settings/setup-required", app.HandleSetupRequired)
 	mux.HandleFunc("GET /api/server-health", app.HandleServerHealth)
+	mux.HandleFunc("POST /api/speed-test", app.HandleSpeedTest)
 
 	mux.HandleFunc("GET /api/updates/status", app.HandleUpdateStatus)
 	mux.HandleFunc("POST /api/updates/check", app.HandleCheckUpdate)
