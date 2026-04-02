@@ -50,6 +50,8 @@ interface Pipe {
   throughputFraction: number
   particles: Particle[]
   spawnAccum: number
+  fromYOffset: number  // vertical offset from node center for fanning
+  toYOffset: number
 }
 
 // ---------------------------------------------------------------------------
@@ -344,7 +346,6 @@ export class TrafficFlowRenderer {
   // -----------------------------------------------------------------------
 
   private rebuildPipes(): void {
-    // Preserve existing particle state by matching on pipe index
     const oldDl = this.downloadPipes
     const oldUl = this.uploadPipes
 
@@ -355,16 +356,44 @@ export class TrafficFlowRenderer {
       throughputFraction: 0,
       particles: oldDl[i]?.particles ?? [],
       spawnAccum: oldDl[i]?.spawnAccum ?? 0,
+      fromYOffset: 0,
+      toYOffset: 0,
     }))
 
-    this.uploadPipes = this.uploadNodes.map((node, i) => ({
-      from: this.centerNode,
-      to: node,
-      color: node.color,
-      throughputFraction: 0,
-      particles: oldUl[i]?.particles ?? [],
-      spawnAccum: oldUl[i]?.spawnAccum ?? 0,
-    }))
+    // When only 1 upload target, fan out into multiple pipes to show streams visually
+    if (this.uploadNodes.length === 1 && this.data) {
+      const node = this.uploadNodes[0]
+      const totalStreams = this.data.uploadStreams || 1
+      const fanCount = Math.min(Math.max(Math.ceil(totalStreams / 8), 3), 6) // 3-6 fan pipes
+      const spreadCenter = this.centerNode.h * 0.6 // spread across 60% of center node height
+      const spreadTarget = node.h * 0.6
+
+      this.uploadPipes = Array.from({ length: fanCount }, (_, i) => {
+        const centerOffset = (i / (fanCount - 1) - 0.5) * spreadCenter
+        const targetOffset = (i / (fanCount - 1) - 0.5) * spreadTarget
+        return {
+          from: this.centerNode,
+          to: node,
+          color: COLORS.uploadAccent,
+          throughputFraction: 0,
+          particles: oldUl[i]?.particles ?? [],
+          spawnAccum: oldUl[i]?.spawnAccum ?? 0,
+          fromYOffset: centerOffset,
+          toYOffset: targetOffset,
+        }
+      })
+    } else {
+      this.uploadPipes = this.uploadNodes.map((node, i) => ({
+        from: this.centerNode,
+        to: node,
+        color: node.color,
+        throughputFraction: 0,
+        particles: oldUl[i]?.particles ?? [],
+        spawnAccum: oldUl[i]?.spawnAccum ?? 0,
+        fromYOffset: 0,
+        toYOffset: 0,
+      }))
+    }
   }
 
   private syncPipes(): void {
@@ -385,13 +414,26 @@ export class TrafficFlowRenderer {
       }
     }
 
-    for (let i = 0; i < this.uploadPipes.length; i++) {
-      const provider = this.data.uploadTargets[i]
+    // Upload pipes — when fanned (1 target, multiple pipes), distribute evenly
+    if (this.data.uploadTargets.length === 1 && this.uploadPipes.length > 1) {
+      const provider = this.data.uploadTargets[0]
       if (provider) {
-        const streamRatio = provider.activeStreams / totalUlStreams
-        const estimatedBps = this.data.totalUploadBps * streamRatio
-        this.uploadPipes[i].throughputFraction = estimatedBps / maxBps
-        this.uploadPipes[i].to.detail = `${provider.activeStreams} streams  ${formatSpeed(estimatedBps)}`
+        const perPipeFraction = (this.data.totalUploadBps / maxBps) / this.uploadPipes.length
+        for (const pipe of this.uploadPipes) {
+          pipe.throughputFraction = perPipeFraction
+        }
+        // Update the node detail on the first pipe's target
+        this.uploadPipes[0].to.detail = `${provider.activeStreams} streams  ${formatSpeed(this.data.totalUploadBps)}`
+      }
+    } else {
+      for (let i = 0; i < this.uploadPipes.length; i++) {
+        const provider = this.data.uploadTargets[i]
+        if (provider) {
+          const streamRatio = provider.activeStreams / totalUlStreams
+          const estimatedBps = this.data.totalUploadBps * streamRatio
+          this.uploadPipes[i].throughputFraction = estimatedBps / maxBps
+          this.uploadPipes[i].to.detail = `${provider.activeStreams} streams  ${formatSpeed(estimatedBps)}`
+        }
       }
     }
   }
@@ -405,17 +447,15 @@ export class TrafficFlowRenderer {
     const to = pipe.to
 
     if (this.isMobile) {
-      // Vertical flow: connect bottom of from → top of to
-      const p0: Point = { x: from.x + from.w / 2, y: from.y + from.h }
-      const p3: Point = { x: to.x + to.w / 2, y: to.y }
+      const p0: Point = { x: from.x + from.w / 2, y: from.y + from.h + pipe.fromYOffset }
+      const p3: Point = { x: to.x + to.w / 2, y: to.y + pipe.toYOffset }
       const dy = (p3.y - p0.y) * 0.4
       const p1: Point = { x: p0.x, y: p0.y + dy }
       const p2: Point = { x: p3.x, y: p3.y - dy }
       return [p0, p1, p2, p3]
     } else {
-      // Horizontal flow: connect right edge of from → left edge of to
-      const p0: Point = { x: from.x + from.w, y: from.y + from.h / 2 }
-      const p3: Point = { x: to.x, y: to.y + to.h / 2 }
+      const p0: Point = { x: from.x + from.w, y: from.y + from.h / 2 + pipe.fromYOffset }
+      const p3: Point = { x: to.x, y: to.y + to.h / 2 + pipe.toYOffset }
       const dx = (p3.x - p0.x) * 0.4
       const p1: Point = { x: p0.x + dx, y: p0.y }
       const p2: Point = { x: p3.x - dx, y: p3.y }
