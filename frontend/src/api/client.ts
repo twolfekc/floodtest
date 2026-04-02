@@ -112,7 +112,9 @@ export interface ISPSpeedTestResult {
 
 export interface UploadServerHealth {
   url: string
+  location: string
   healthy: boolean
+  blocked: boolean
   consecutiveFailures: number
   totalFailures: number
   totalUploads: number
@@ -120,6 +122,7 @@ export interface UploadServerHealth {
   lastErrorTime?: string
   unhealthyUntil?: string
   bytesUploaded: number
+  speedBps: number
   activeStreams: number
   status: string
 }
@@ -207,4 +210,9 @@ export const api = {
     body: JSON.stringify({ url }),
   }),
   unblockAll: () => request<{ status: string; count: number }>('/api/server-unblock-all', { method: 'POST' }),
+  unblockUploadServer: (url: string) => request<{ status: string }>('/api/upload-unblock', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  }),
+  unblockAllUploads: () => request<{ status: string; count: number }>('/api/upload-unblock-all', { method: 'POST' }),
 }
