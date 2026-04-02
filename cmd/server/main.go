@@ -16,6 +16,7 @@ import (
 	"wansaturator/internal/config"
 	"wansaturator/internal/db"
 	"wansaturator/internal/download"
+	"wansaturator/internal/events"
 	"wansaturator/internal/scheduler"
 	"wansaturator/internal/speedtest"
 	"wansaturator/internal/stats"
@@ -53,11 +54,16 @@ func main() {
 	// Initialize stats collector
 	collector := stats.NewCollector(database)
 
+	// Shared event buffer for engine/server activity
+	eventBuf := events.NewBuffer(50)
+
 	// Initialize download engine
 	serverList := download.NewServerList(cfg.DownloadServers)
+	serverList.SetEventBuffer(eventBuf)
 	dlEngine := download.New(serverList, cfg.DownloadConcurrency, mbpsToBps(cfg.DefaultDownloadMbps))
 	dlEngine.SetStatsCollector(collector)
 	dlEngine.SetStatsProvider(func() int64 { return collector.CurrentRate().DownloadBps })
+	dlEngine.SetEventBuffer(eventBuf)
 
 	// Initialize upload engine
 	ulEngine := upload.New(
@@ -68,9 +74,11 @@ func main() {
 	)
 	ulEngine.SetStatsCollector(collector)
 	ulEngine.SetStatsProvider(func() int64 { return collector.CurrentRate().UploadBps })
+	ulEngine.SetEventBuffer(eventBuf)
 
 	// Initialize upload endpoint list and HTTP engine (for HTTP discard mode)
 	uploadServerList := upload.NewUploadServerList(cfg.UploadEndpoints)
+	uploadServerList.SetEventBuffer(eventBuf)
 	httpUploadEngine := upload.NewHTTPEngine(
 		uploadServerList,
 		cfg.UploadConcurrency,
@@ -79,6 +87,7 @@ func main() {
 	)
 	httpUploadEngine.SetStatsCollector(collector)
 	httpUploadEngine.SetStatsProvider(func() int64 { return collector.CurrentRate().UploadBps })
+	httpUploadEngine.SetEventBuffer(eventBuf)
 
 	// Track running state
 	var running atomic.Bool
@@ -380,6 +389,7 @@ func main() {
 					dlBps = rate.DownloadBps
 					ulBps = rate.UploadBps
 				}
+				pendingEvents := eventBuf.Drain()
 				hub.Broadcast(api.WsMessage{
 					DownloadBps:          dlBps,
 					UploadBps:            ulBps,
@@ -402,6 +412,7 @@ func main() {
 					ISPTestRunning:       ispTestRunning.Load(),
 					ISPTestPhase:         ispTestPhase.Load().(string),
 					ISPTestProgress:      int(ispTestProgress.Load()),
+					Events:               pendingEvents,
 				})
 			}
 		}

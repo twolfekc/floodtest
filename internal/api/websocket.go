@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"nhooyr.io/websocket"
+	"wansaturator/internal/events"
 )
 
 type WsMessage struct {
@@ -32,7 +33,8 @@ type WsMessage struct {
 	MeasuredUploadMbps   float64 `json:"measuredUploadMbps,omitempty"`
 	ISPTestRunning       bool    `json:"ispTestRunning,omitempty"`
 	ISPTestPhase         string  `json:"ispTestPhase,omitempty"`
-	ISPTestProgress      int     `json:"ispTestProgress,omitempty"`
+	ISPTestProgress      int              `json:"ispTestProgress,omitempty"`
+	Events               []events.Event   `json:"events,omitempty"`
 }
 
 type WsHub struct {
