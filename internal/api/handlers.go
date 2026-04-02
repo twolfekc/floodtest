@@ -37,6 +37,8 @@ type App struct {
 	GetUploadServerHealth   func() interface{}
 	RunSpeedTest            func(ctx context.Context) interface{}
 	RunISPSpeedTest         func(ctx context.Context) (interface{}, error)
+	UnblockServer           func(url string) bool
+	UnblockAll              func() int
 	GetUpdateStatus         func() interface{}
 	CheckForUpdate          func(ctx context.Context) (interface{}, error)
 	ApplyUpdate             func(ctx context.Context) error
@@ -446,6 +448,29 @@ func (a *App) HandleUploadServerHealth(w http.ResponseWriter, r *http.Request) {
 	} else {
 		writeJSON(w, []struct{}{})
 	}
+}
+
+func (a *App) HandleUnblockServer(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.URL == "" {
+		writeError(w, 400, "invalid request: url required")
+		return
+	}
+	if a.UnblockServer != nil && a.UnblockServer(req.URL) {
+		writeJSON(w, map[string]string{"status": "unblocked"})
+	} else {
+		writeError(w, 404, "server not found")
+	}
+}
+
+func (a *App) HandleUnblockAll(w http.ResponseWriter, r *http.Request) {
+	count := 0
+	if a.UnblockAll != nil {
+		count = a.UnblockAll()
+	}
+	writeJSON(w, map[string]interface{}{"status": "unblocked", "count": count})
 }
 
 func (a *App) HandleSpeedTest(w http.ResponseWriter, r *http.Request) {

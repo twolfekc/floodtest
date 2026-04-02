@@ -114,6 +114,7 @@ type ServerHealth struct {
 	URL                 string    `json:"url"`
 	Location            string    `json:"location"`
 	Healthy             bool      `json:"healthy"`
+	Blocked             bool      `json:"blocked"`
 	ConsecutiveFailures int       `json:"consecutiveFailures"`
 	TotalFailures       int       `json:"totalFailures"`
 	TotalDownloads      int       `json:"totalDownloads"`
@@ -131,6 +132,7 @@ type Server struct {
 	URL                 string
 	Location            string
 	healthy             bool
+	blocked             bool // permanently blocked until user unblocks
 	unhealthyUntil      time.Time
 	consecutiveFailures int
 	totalFailures       int
@@ -191,10 +193,10 @@ func (sl *ServerList) Next() string {
 
 	now := time.Now()
 
-	// Phase 1: promote servers whose cooldown expired.
+	// Phase 1: promote servers whose cooldown expired (skip blocked).
 	for i := range sl.servers {
 		s := &sl.servers[i]
-		if !s.healthy && now.After(s.unhealthyUntil) {
+		if !s.healthy && !s.blocked && now.After(s.unhealthyUntil) {
 			s.healthy = true
 			s.unhealthyUntil = time.Time{}
 			s.consecutiveFailures = 0
@@ -211,7 +213,7 @@ func (sl *ServerList) Next() string {
 
 	for i := range sl.servers {
 		s := &sl.servers[i]
-		if s.healthy && !s.testing {
+		if s.healthy && !s.testing && !s.blocked {
 			candidates = append(candidates, candidate{idx: i, score: s.speedScore})
 			if s.speedScore > 0 {
 				hasScores = true
@@ -219,14 +221,14 @@ func (sl *ServerList) Next() string {
 		}
 	}
 
-	// Phase 3: if no eligible servers, pick the one with soonest recovery.
+	// Phase 3: if no eligible servers, pick the non-blocked one with soonest recovery.
 	if len(candidates) == 0 {
 		var bestIdx int
 		var bestTime time.Time
 		first := true
 		for i := range sl.servers {
 			s := &sl.servers[i]
-			if first || s.unhealthyUntil.Before(bestTime) {
+			if !s.blocked && (first || s.unhealthyUntil.Before(bestTime)) {
 				bestIdx = i
 				bestTime = s.unhealthyUntil
 				first = false
@@ -284,6 +286,11 @@ func (sl *ServerList) MarkUnhealthy(url string, errMsg string) {
 			s.totalFailures++
 			s.lastError = errMsg
 			s.lastErrorTime = time.Now()
+
+			// Auto-block servers with 5+ consecutive failures
+			if s.consecutiveFailures >= 5 {
+				s.blocked = true
+			}
 
 			// Exponential backoff: 30s * 2^(failures-1), capped at 10min
 			cooldown := unhealthyCooldown
@@ -385,19 +392,20 @@ func (sl *ServerList) HealthStatus() []ServerHealth {
 	result := make([]ServerHealth, len(sl.servers))
 	for i, s := range sl.servers {
 		healthy := s.healthy
-		if !healthy && now.After(s.unhealthyUntil) {
+		if !healthy && !s.blocked && now.After(s.unhealthyUntil) {
 			healthy = true // cooldown expired
 		}
 
 		status := "healthy"
 		if s.testing {
 			status = "testing"
+		} else if s.blocked {
+			status = "blocked"
 		} else if !s.healthy {
 			if now.Before(s.unhealthyUntil) {
 				status = "cooldown"
-			}
-			if s.consecutiveFailures >= 5 {
-				status = "failed"
+			} else {
+				status = "healthy" // cooldown expired
 			}
 		}
 
@@ -405,6 +413,7 @@ func (sl *ServerList) HealthStatus() []ServerHealth {
 			URL:                 s.URL,
 			Location:            s.Location,
 			Healthy:             healthy,
+			Blocked:             s.blocked,
 			ConsecutiveFailures: s.consecutiveFailures,
 			TotalFailures:       s.totalFailures,
 			TotalDownloads:      s.totalDownloads,
@@ -443,7 +452,7 @@ func (sl *ServerList) HealthyCount() int {
 	now := time.Now()
 	count := 0
 	for _, s := range sl.servers {
-		if s.healthy || now.After(s.unhealthyUntil) {
+		if !s.blocked && (s.healthy || now.After(s.unhealthyUntil)) {
 			count++
 		}
 	}
@@ -457,13 +466,46 @@ func (sl *ServerList) TotalCount() int {
 	return len(sl.servers)
 }
 
-// ResetCooldowns marks all servers as healthy, clearing any backoff state.
+// ResetCooldowns marks all servers as healthy, clearing any backoff and blocked state.
 func (sl *ServerList) ResetCooldowns() {
 	sl.mu.Lock()
 	defer sl.mu.Unlock()
 	for i := range sl.servers {
 		sl.servers[i].healthy = true
+		sl.servers[i].blocked = false
 		sl.servers[i].unhealthyUntil = time.Time{}
 		sl.servers[i].consecutiveFailures = 0
 	}
+}
+
+// UnblockServer removes the blocked state for a server.
+// The server goes back to cooldown state (keeps failure history).
+func (sl *ServerList) UnblockServer(url string) bool {
+	sl.mu.Lock()
+	defer sl.mu.Unlock()
+	for i := range sl.servers {
+		if sl.servers[i].URL == url {
+			sl.servers[i].blocked = false
+			sl.servers[i].healthy = false
+			sl.servers[i].unhealthyUntil = time.Now().Add(unhealthyCooldown)
+			return true
+		}
+	}
+	return false
+}
+
+// UnblockAll removes the blocked state from all servers.
+func (sl *ServerList) UnblockAll() int {
+	sl.mu.Lock()
+	defer sl.mu.Unlock()
+	count := 0
+	for i := range sl.servers {
+		if sl.servers[i].blocked {
+			sl.servers[i].blocked = false
+			sl.servers[i].healthy = false
+			sl.servers[i].unhealthyUntil = time.Now().Add(unhealthyCooldown)
+			count++
+		}
+	}
+	return count
 }

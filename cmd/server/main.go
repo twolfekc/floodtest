@@ -286,7 +286,9 @@ func main() {
 		GetSessionUploadBytes:   func() int64 { return collector.SessionUploadBytes() },
 		GetCurrentDownloadBps:   func() int64 { return collector.CurrentRate().DownloadBps },
 		GetCurrentUploadBps:     func() int64 { return collector.CurrentRate().UploadBps },
-		GetServerHealth: func() interface{} { return serverList.HealthStatus() },
+		GetServerHealth:  func() interface{} { return serverList.HealthStatus() },
+		UnblockServer:    func(url string) bool { return serverList.UnblockServer(url) },
+		UnblockAll:       func() int { return serverList.UnblockAll() },
 		RunSpeedTest: func(ctx context.Context) interface{} {
 			return serverList.RunSpeedTest(ctx, func(p download.SpeedTestProgress) {
 				speedTestRunning.Store(p.Running)
