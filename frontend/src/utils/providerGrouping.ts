@@ -9,7 +9,7 @@ export interface ProviderGroup {
   color: string
 }
 
-const PROVIDER_PATTERNS: [RegExp, string][] = [
+export const PROVIDER_PATTERNS: [RegExp, string][] = [
   [/hetzner\.(com|de)/, 'Hetzner'],
   [/vultr\.com/, 'Vultr'],
   [/leaseweb\.net/, 'Leaseweb'],
@@ -28,13 +28,13 @@ const PROVIDER_PATTERNS: [RegExp, string][] = [
   [/scaleway/, 'Scaleway'],
 ]
 
-const PROVIDER_COLORS = [
+export const PROVIDER_COLORS = [
   '#22d3ee', '#a78bfa', '#34d399', '#f472b6', '#fb923c',
   '#facc15', '#60a5fa', '#c084fc', '#4ade80', '#f87171',
   '#38bdf8', '#e879f9', '#2dd4bf', '#fbbf24', '#818cf8', '#a3e635',
 ]
 
-function extractProvider(url: string): string {
+export function extractProvider(url: string): string {
   try {
     const hostname = new URL(url).hostname.toLowerCase()
     for (const [pattern, name] of PROVIDER_PATTERNS) {

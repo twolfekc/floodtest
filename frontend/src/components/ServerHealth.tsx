@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { api, ServerHealth as ServerHealthData, UploadServerHealth as UploadServerHealthData, SpeedTestResult } from '../api/client'
+import ProviderAccordion from './ProviderAccordion'
 
 interface Props {
   speedTestRunning?: boolean
@@ -25,75 +26,10 @@ interface NormalizedServer {
   status: string
 }
 
-type SortKey = 'server' | 'location' | 'status' | 'speed' | 'streams' | 'transferred' | 'error'
-type SortDir = 'asc' | 'desc'
 type SectionType = 'download' | 'upload'
 
 // ── Helper functions ──────────────────────────────────────────────────
 
-function formatUrl(url: string): string {
-  try {
-    return new URL(url).hostname
-  } catch {
-    return url
-  }
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(2)} TB`
-  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`
-  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(2)} MB`
-  return `${(bytes / 1e3).toFixed(1)} KB`
-}
-
-function formatSpeed(bps: number): string {
-  if (bps <= 0) return '\u2014'
-  if (bps >= 1e9) return `${(bps / 1e9).toFixed(2)} Gbps`
-  return `${(bps / 1e6).toFixed(1)} Mbps`
-}
-
-function timeUntil(isoString: string): string {
-  const target = new Date(isoString).getTime()
-  const now = Date.now()
-  const diffMs = target - now
-  if (diffMs <= 0) return ''
-  const totalSeconds = Math.ceil(diffMs / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes}m ${seconds}s`
-}
-
-function statusColor(status: string): string {
-  switch (status) {
-    case 'healthy':
-      return 'bg-green-900/50 text-green-400 border-green-800'
-    case 'testing':
-      return 'bg-blue-900/50 text-blue-400 border-blue-800'
-    case 'cooldown':
-      return 'bg-yellow-900/50 text-yellow-400 border-yellow-800'
-    case 'failed':
-      return 'bg-red-900/50 text-red-400 border-red-800'
-    case 'blocked':
-      return 'bg-red-900/50 text-red-400 border-red-800'
-    default:
-      return 'bg-gray-800 text-gray-400 border-gray-700'
-  }
-}
-
-function rowBg(server: NormalizedServer): string {
-  switch (server.status) {
-    case 'testing':
-      return 'bg-blue-900/10'
-    case 'cooldown':
-      return 'bg-yellow-900/10'
-    case 'failed':
-      return 'bg-red-900/10'
-    case 'blocked':
-      return 'bg-red-950/20 opacity-60'
-    default:
-      return ''
-  }
-}
 
 function normalizeDownload(s: ServerHealthData): NormalizedServer {
   return {
@@ -208,175 +144,6 @@ function InlineStatusCounts({ counts }: { counts: StatusCounts }) {
   )
 }
 
-// ── Sortable server table ─────────────────────────────────────────────
-
-interface ServerTableProps {
-  servers: NormalizedServer[]
-  section: SectionType
-  onUnblock: (url: string) => void
-}
-
-function ServerTable({ servers, section, onUnblock }: ServerTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('speed')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortKey(key)
-      setSortDir(key === 'speed' || key === 'transferred' || key === 'streams' ? 'desc' : 'asc')
-    }
-  }
-
-  const sortArrow = (key: SortKey) => {
-    if (sortKey !== key) return ''
-    return sortDir === 'asc' ? ' \u25B2' : ' \u25BC'
-  }
-
-  const sorted = useMemo(() => {
-    return [...servers].sort((a, b) => {
-      // Three-tier: healthy/testing first, then cooldown, then blocked
-      const tierOrder: Record<string, number> = { healthy: 0, testing: 0, cooldown: 1, blocked: 2, failed: 2 }
-      const aTier = tierOrder[a.status] ?? 1
-      const bTier = tierOrder[b.status] ?? 1
-      if (aTier !== bTier) return aTier - bTier
-
-      // Within same tier, apply column sort
-      const dir = sortDir === 'asc' ? 1 : -1
-      let cmp = 0
-      switch (sortKey) {
-        case 'server':
-          cmp = formatUrl(a.url).localeCompare(formatUrl(b.url)); break
-        case 'location':
-          cmp = (a.location || '').localeCompare(b.location || ''); break
-        case 'status': {
-          const order: Record<string, number> = { healthy: 0, testing: 1, cooldown: 2, failed: 3, blocked: 4 }
-          cmp = (order[a.status] ?? 5) - (order[b.status] ?? 5); break
-        }
-        case 'speed':
-          cmp = a.speedBps - b.speedBps; break
-        case 'streams':
-          cmp = a.activeStreams - b.activeStreams; break
-        case 'transferred':
-          cmp = a.bytesTransferred - b.bytesTransferred; break
-        case 'error':
-          cmp = (a.lastError || '').localeCompare(b.lastError || ''); break
-      }
-      return dir * cmp
-    })
-  }, [servers, sortKey, sortDir])
-
-  const maxSpeed = useMemo(() => {
-    return Math.max(...servers.map((s) => s.speedBps), 1)
-  }, [servers])
-
-  const speedBarColor = section === 'download' ? 'bg-cyan-500' : 'bg-violet-500'
-
-  const columns: { key: SortKey; label: string }[] = [
-    { key: 'server', label: 'Server' },
-    { key: 'location', label: 'Location' },
-    { key: 'status', label: 'Status' },
-    { key: 'speed', label: 'Speed' },
-    { key: 'streams', label: 'Streams' },
-    { key: 'transferred', label: 'Transferred' },
-    { key: 'error', label: 'Error' },
-  ]
-
-  if (servers.length === 0) {
-    return (
-      <div className="px-4 py-6 text-center">
-        <span className="text-sm text-gray-500">
-          No {section} servers configured
-        </span>
-      </div>
-    )
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm text-left">
-        <thead>
-          <tr className="border-b border-gray-800 text-gray-500 text-xs uppercase tracking-wide">
-            {columns.map(({ key, label }) => (
-              <th
-                key={key}
-                onClick={() => handleSort(key)}
-                className="px-4 py-2 font-medium cursor-pointer hover:text-gray-300 select-none whitespace-nowrap"
-              >
-                {label}{sortArrow(key)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-800">
-          {sorted.map((server) => {
-            const cooldown = server.unhealthyUntil ? timeUntil(server.unhealthyUntil) : ''
-            const speedPct = maxSpeed > 0 ? (server.speedBps / maxSpeed) * 100 : 0
-
-            return (
-              <tr key={server.url} className={rowBg(server)}>
-                <td className="px-4 py-2 text-white font-medium whitespace-nowrap">
-                  {formatUrl(server.url)}
-                </td>
-                <td className="px-4 py-2 text-gray-400 whitespace-nowrap">
-                  {server.location || '\u2014'}
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${statusColor(server.status)}`}>
-                    {server.status === 'cooldown' && cooldown
-                      ? `Cooldown (${cooldown})`
-                      : server.status.charAt(0).toUpperCase() + server.status.slice(1)}
-                  </span>
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-300 min-w-[80px]">
-                      {formatSpeed(server.speedBps)}
-                    </span>
-                    <div className="bg-gray-800 rounded-full h-1.5 w-20 flex-shrink-0">
-                      <div
-                        className={`${speedBarColor} h-1.5 rounded-full`}
-                        style={{ width: `${speedPct}%` }}
-                      />
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-2 text-gray-400 text-center">
-                  {server.activeStreams}
-                </td>
-                <td className="px-4 py-2 text-gray-400 whitespace-nowrap">
-                  {formatBytes(server.bytesTransferred)}
-                </td>
-                <td className="px-4 py-2 text-xs max-w-[200px]">
-                  {server.status === 'blocked' ? (
-                    <button
-                      onClick={() => onUnblock(server.url)}
-                      className="px-2 py-1 rounded text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-300"
-                    >
-                      Unblock
-                    </button>
-                  ) : (
-                    <span
-                      className="text-red-400 max-w-xs truncate block"
-                      title={server.lastError || undefined}
-                    >
-                      {server.lastError
-                        ? server.lastError.length > 60
-                          ? server.lastError.slice(0, 60) + '...'
-                          : server.lastError
-                        : ''}
-                    </span>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
-}
 
 // ── Main component ────────────────────────────────────────────────────
 
@@ -547,11 +314,10 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
           </div>
         )}
 
-        {/* Table */}
+        {/* Provider-grouped accordion */}
         {!downloadCollapsed && (
-          <ServerTable
-            servers={normalizedDownloads}
-            section="download"
+          <ProviderAccordion
+            downloadServers={downloadServers}
             onUnblock={handleUnblockDownload}
           />
         )}
@@ -584,11 +350,10 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
           </div>
         </div>
 
-        {/* Table */}
+        {/* Provider-grouped accordion */}
         {!uploadCollapsed && (
-          <ServerTable
-            servers={normalizedUploads}
-            section="upload"
+          <ProviderAccordion
+            uploadServers={uploadServers}
             onUnblock={handleUnblockUpload}
           />
         )}
