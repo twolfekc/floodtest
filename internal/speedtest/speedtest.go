@@ -15,7 +15,10 @@ import (
 )
 
 const (
-	downloadURL     = "https://speed.cloudflare.com/__down?bytes=1000000000" // 1GB — avoids file exhaustion on fast links
+	// Cloudflare rate-limits large single requests (403 for 100MB+).
+	// Use 25MB chunks — each goroutine loops and re-requests, keeping the
+	// connection busy for the full test window without triggering the limit.
+	downloadURL     = "https://speed.cloudflare.com/__down?bytes=25000000" // 25MB per request
 	uploadURL       = "https://speed.cloudflare.com/__up"
 	streams         = 16
 	warmupDuration  = 3 * time.Second
@@ -101,6 +104,12 @@ func measureDownload(ctx context.Context, client *http.Client, onProgress Progre
 					if ctx.Err() != nil {
 						return
 					}
+					continue
+				}
+				if resp.StatusCode != http.StatusOK {
+					resp.Body.Close()
+					log.Printf("[speedtest] download got HTTP %d, retrying", resp.StatusCode)
+					time.Sleep(100 * time.Millisecond)
 					continue
 				}
 				for {
