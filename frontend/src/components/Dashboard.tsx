@@ -152,11 +152,11 @@ export default function Dashboard({ ws }: DashboardProps) {
         </div>
       </div>
 
-      {/* Mode Selector — two cards side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Mode Selector — two cards side by side, always equal height */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         <div
           onClick={() => { if (mode !== 'reliable') handleModeChange('reliable') }}
-          className={`bg-gray-900 rounded-xl border-2 p-5 transition-colors text-left ${
+          className={`bg-gray-900 rounded-xl border-2 p-5 transition-colors text-left flex flex-col ${
             mode === 'reliable'
               ? 'border-blue-500'
               : 'border-gray-800 hover:border-gray-600 cursor-pointer'
@@ -172,69 +172,67 @@ export default function Dashboard({ ws }: DashboardProps) {
             Auto-tuned for sustained throughput.
           </p>
 
-          {mode === 'reliable' && (
-            <div className="mt-4 space-y-3 border-t border-gray-800 pt-4" onClick={e => e.stopPropagation()}>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Configure speeds</p>
+          <div className="mt-4 space-y-3 border-t border-gray-800 pt-4 flex-1" onClick={e => e.stopPropagation()}>
+            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Configure speeds</p>
 
-              {/* Manual input */}
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <label className="block text-xs text-gray-500 mb-1">Download (Mbps)</label>
-                  <input
-                    type="number"
-                    placeholder={stats.measuredDownloadMbps > 0 ? String(Math.round(stats.measuredDownloadMbps)) : 'e.g. 5000'}
-                    value={manualDl}
-                    onChange={e => setManualDl(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs text-gray-500 mb-1">Upload (Mbps)</label>
-                  <input
-                    type="number"
-                    placeholder={stats.measuredUploadMbps > 0 ? String(Math.round(stats.measuredUploadMbps)) : 'e.g. 5000'}
-                    value={manualUl}
-                    onChange={e => setManualUl(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <button
-                  onClick={handleManualSave}
-                  disabled={savingManual || !manualDl || !manualUl}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-                >
-                  {savingManual ? '...' : 'Apply'}
-                </button>
+            {/* Manual input */}
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-1">Download (Mbps)</label>
+                <input
+                  type="number"
+                  placeholder={stats.measuredDownloadMbps > 0 ? String(Math.round(stats.measuredDownloadMbps)) : 'e.g. 5000'}
+                  value={manualDl}
+                  onChange={e => setManualDl(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+                />
               </div>
-              <p className="text-xs text-gray-600">Enter your ISP speeds. Targets are set to 90% of these values.</p>
-
-              {/* Divider */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1 border-t border-gray-800" />
-                <span className="text-xs text-gray-600">or</span>
-                <div className="flex-1 border-t border-gray-800" />
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-1">Upload (Mbps)</label>
+                <input
+                  type="number"
+                  placeholder={stats.measuredUploadMbps > 0 ? String(Math.round(stats.measuredUploadMbps)) : 'e.g. 5000'}
+                  value={manualUl}
+                  onChange={e => setManualUl(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+                />
               </div>
-
-              {/* Speed test option */}
               <button
-                onClick={() => handleModeChange('reliable')}
-                disabled={stats.ispTestRunning}
-                className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 disabled:opacity-50"
+                onClick={handleManualSave}
+                disabled={savingManual || !manualDl || !manualUl}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
               >
-                {stats.ispTestRunning ? 'Running speed test...' : 'Run Speed Test'}
+                {savingManual ? '...' : 'Apply'}
               </button>
-              {hasMeasurements && (
-                <p className="text-xs text-gray-600">
-                  Last test: {Math.round(stats.measuredDownloadMbps)} Mbps down / {Math.round(stats.measuredUploadMbps)} Mbps up
-                </p>
-              )}
             </div>
-          )}
+            <p className="text-xs text-gray-600">Enter your ISP speeds. Targets are set to 90% of these values.</p>
+
+            {/* Divider */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 border-t border-gray-800" />
+              <span className="text-xs text-gray-600">or</span>
+              <div className="flex-1 border-t border-gray-800" />
+            </div>
+
+            {/* Speed test option */}
+            <button
+              onClick={() => handleModeChange('reliable')}
+              disabled={stats.ispTestRunning}
+              className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 disabled:opacity-50"
+            >
+              {stats.ispTestRunning ? 'Running speed test...' : 'Run Speed Test'}
+            </button>
+            {hasMeasurements && (
+              <p className="text-xs text-gray-600">
+                Last test: {Math.round(stats.measuredDownloadMbps)} Mbps down / {Math.round(stats.measuredUploadMbps)} Mbps up
+              </p>
+            )}
+          </div>
         </div>
 
         <div
           onClick={() => { if (mode !== 'max') handleModeChange('max') }}
-          className={`bg-gray-900 rounded-xl border-2 p-5 transition-colors text-left self-start ${
+          className={`bg-gray-900 rounded-xl border-2 p-5 transition-colors text-left flex flex-col ${
             mode === 'max'
               ? 'border-blue-500'
               : 'border-gray-800 hover:border-gray-600 cursor-pointer'
@@ -250,29 +248,27 @@ export default function Dashboard({ ws }: DashboardProps) {
             No limits. Maximum streams, no rate limiting.
           </p>
 
-          {mode === 'max' && (
-            <div className="mt-4 space-y-3 border-t border-gray-800 pt-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Configuration</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-800 rounded-lg px-3 py-2">
-                  <p className="text-xs text-gray-500">Download Streams</p>
-                  <p className="text-sm font-semibold text-white">64 (unlimited)</p>
-                </div>
-                <div className="bg-gray-800 rounded-lg px-3 py-2">
-                  <p className="text-xs text-gray-500">Upload Streams</p>
-                  <p className="text-sm font-semibold text-white">32 (unlimited)</p>
-                </div>
+          <div className="mt-4 space-y-3 border-t border-gray-800 pt-4 flex-1">
+            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Configuration</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-800 rounded-lg px-3 py-2">
+                <p className="text-xs text-gray-500">Download Streams</p>
+                <p className="text-sm font-semibold text-white">64 (unlimited)</p>
               </div>
-              <div className="flex items-start gap-2 bg-red-900/20 border border-red-900/30 rounded-lg px-3 py-2">
-                <svg className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <p className="text-xs text-red-400/80">
-                  Uses all available bandwidth with no rate limiting. May affect other devices on your network.
-                </p>
+              <div className="bg-gray-800 rounded-lg px-3 py-2">
+                <p className="text-xs text-gray-500">Upload Streams</p>
+                <p className="text-sm font-semibold text-white">32 (unlimited)</p>
               </div>
             </div>
-          )}
+            <div className="flex items-start gap-2 bg-red-900/20 border border-red-900/30 rounded-lg px-3 py-2">
+              <svg className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <p className="text-xs text-red-400/80">
+                Uses all available bandwidth with no rate limiting. May affect other devices on your network.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
