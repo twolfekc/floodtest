@@ -1,6 +1,8 @@
 package upload
 
 import (
+	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,11 +29,13 @@ type UploadServerHealth struct {
 	ActiveStreams       int32     `json:"activeStreams"`
 	SpeedBps            float64   `json:"speedBps"`
 	Status              string    `json:"status"`
+	Location            string    `json:"location,omitempty"`
 }
 
 // uploadServer represents a single upload endpoint with health tracking.
 type uploadServer struct {
 	url                 string
+	location            string
 	healthy             bool
 	unhealthyUntil      time.Time
 	consecutiveFailures int
@@ -53,12 +57,37 @@ type UploadServerList struct {
 	index   int
 }
 
+// deriveUploadLocation extracts a human-readable region label from a server URL's hostname.
+// Returns an empty string if the hostname doesn't match any known region pattern.
+func deriveUploadLocation(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	host := strings.ToLower(u.Hostname())
+
+	regionMap := map[string]string{
+		"us-west":    "US West",
+		"us-east":    "US East",
+		"eu-central": "EU Central",
+		"eu-west":    "EU West",
+		"ap-south":   "AP South",
+		"ap-north":   "AP Northeast",
+	}
+	for pattern, label := range regionMap {
+		if strings.Contains(host, pattern) {
+			return label
+		}
+	}
+	return ""
+}
+
 // NewUploadServerList creates an UploadServerList from the given URLs.
 // All servers start in the healthy state.
 func NewUploadServerList(urls []string) *UploadServerList {
 	servers := make([]uploadServer, len(urls))
 	for i, u := range urls {
-		servers[i] = uploadServer{url: u, healthy: true}
+		servers[i] = uploadServer{url: u, location: deriveUploadLocation(u), healthy: true}
 	}
 	return &UploadServerList{servers: servers}
 }
@@ -254,6 +283,7 @@ func (sl *UploadServerList) HealthStatus() []UploadServerHealth {
 			ActiveStreams:       atomic.LoadInt32(&sl.servers[i].activeStreams),
 			SpeedBps:            s.speedScore,
 			Status:              status,
+			Location:            s.location,
 		}
 	}
 	return result
@@ -267,7 +297,7 @@ func (sl *UploadServerList) UpdateServers(urls []string) {
 
 	servers := make([]uploadServer, len(urls))
 	for i, u := range urls {
-		servers[i] = uploadServer{url: u, healthy: true}
+		servers[i] = uploadServer{url: u, location: deriveUploadLocation(u), healthy: true}
 	}
 	sl.servers = servers
 	sl.index = 0

@@ -36,3 +36,28 @@ func TestUpdateSpeedScore(t *testing.T) {
 	// Unknown URL is a no-op
 	sl.UpdateSpeedScore("http://unknown.com", 999)
 }
+
+func TestUploadServerLocation(t *testing.T) {
+	sl := NewUploadServerList([]string{
+		"https://s3.us-west-002.backblazeb2.com/bucket",
+		"https://s3.eu-central-003.backblazeb2.com/bucket",
+		"https://s3.us-east-005.backblazeb2.com/bucket",
+		"https://custom-server.example.com/upload",
+	})
+
+	health := sl.HealthStatus()
+	cases := []struct {
+		idx      int
+		expected string
+	}{
+		{0, "US West"},
+		{1, "EU Central"},
+		{2, "US East"},
+		{3, ""},
+	}
+	for _, tc := range cases {
+		if health[tc.idx].Location != tc.expected {
+			t.Errorf("server %d: expected location %q, got %q", tc.idx, tc.expected, health[tc.idx].Location)
+		}
+	}
+}
