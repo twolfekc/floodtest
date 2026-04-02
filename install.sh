@@ -4,7 +4,7 @@ set -e
 # ─────────────────────────────────────────────────────────────
 # FloodTest Installer
 # Installs Docker (if needed) and runs FloodTest via Docker Compose.
-# Usage: curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/install.sh | sudo bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/wolfebase/floodtest/main/install.sh | sudo bash
 # ─────────────────────────────────────────────────────────────
 
 INSTALL_DIR="/opt/floodtest"
@@ -55,7 +55,7 @@ mkdir -p "${INSTALL_DIR}"
 cat > "${INSTALL_DIR}/docker-compose.yml" <<'EOF'
 services:
   floodtest:
-    image: ghcr.io/twolfekc/floodtest:latest
+    image: ghcr.io/wolfebase/floodtest:latest
     container_name: floodtest
     restart: unless-stopped
     ports:

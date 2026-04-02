@@ -64,8 +64,8 @@ Default port: **7860**. Settings persist in SQLite at `$DATA_DIR/wansaturator.db
 
 ## Deployment
 
-- **GitHub repo**: `twolfekc/floodtest`
-- **Container image**: `ghcr.io/twolfekc/floodtest:latest` (multi-arch amd64+arm64)
+- **GitHub repo**: `wolfebase/floodtest`
+- **Container image**: `ghcr.io/wolfebase/floodtest:latest` (multi-arch amd64+arm64)
 - **CI**: `.github/workflows/build.yml` builds and pushes on every push to `main`
 - **Install script**: `install.sh` — standalone, writes compose file to `/opt/floodtest/`, installs Docker
 - **Docker socket**: Mounted for self-update feature. `COMPOSE_DIR` env var tells updater where the compose file lives.

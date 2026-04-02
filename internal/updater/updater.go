@@ -72,7 +72,7 @@ type Updater struct {
 func New(db *sql.DB) *Updater {
 	u := &Updater{
 		db:            db,
-		imageName:     "ghcr.io/twolfekc/floodtest",
+		imageName:     "ghcr.io/wolfebase/floodtest",
 		containerName: "floodtest",
 		composeDir:    os.Getenv("COMPOSE_DIR"),
 	}
@@ -372,7 +372,7 @@ func (u *Updater) getCurrentDigest() string {
 }
 
 func (u *Updater) fetchLatestDigest(ctx context.Context) (string, string, error) {
-	tokenURL := "https://ghcr.io/token?scope=repository:twolfekc/floodtest:pull"
+	tokenURL := "https://ghcr.io/token?scope=repository:wolfebase/floodtest:pull"
 	req, _ := http.NewRequestWithContext(ctx, "GET", tokenURL, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -385,7 +385,7 @@ func (u *Updater) fetchLatestDigest(ctx context.Context) (string, string, error)
 	json.NewDecoder(resp.Body).Decode(&tok)
 
 	// GET (not HEAD) the manifest so we can read annotations/labels for version.
-	mURL := "https://ghcr.io/v2/twolfekc/floodtest/manifests/latest"
+	mURL := "https://ghcr.io/v2/wolfebase/floodtest/manifests/latest"
 	req, _ = http.NewRequestWithContext(ctx, "GET", mURL, nil)
 	req.Header.Set("Authorization", "Bearer "+tok.Token)
 	req.Header.Set("Accept", "application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json")

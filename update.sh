@@ -4,7 +4,7 @@ set -e
 # ─────────────────────────────────────────────────────────────
 # FloodTest Updater
 # Pulls the latest image and restarts the container.
-# Usage: curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/update.sh | sudo bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/wolfebase/floodtest/main/update.sh | sudo bash
 # ─────────────────────────────────────────────────────────────
 
 INSTALL_DIR="/opt/floodtest"
@@ -25,7 +25,7 @@ fi
 if [ ! -f "${INSTALL_DIR}/docker-compose.yml" ]; then
   echo "ERROR: FloodTest is not installed at ${INSTALL_DIR}."
   echo "Run the install script first:"
-  echo "  curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/install.sh | sudo bash"
+  echo "  curl -fsSL https://raw.githubusercontent.com/wolfebase/floodtest/main/install.sh | sudo bash"
   exit 1
 fi
 

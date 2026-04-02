@@ -8,11 +8,11 @@
 
 <br/>
 
-[![Docker Image](https://img.shields.io/badge/ghcr.io-twolfekc%2Ffloodtest-0891b2?style=flat-square&logo=docker&logoColor=white)](https://github.com/twolfekc/floodtest/pkgs/container/floodtest)
-[![Image Size](https://img.shields.io/badge/image-~23MB-164e63?style=flat-square&logo=docker&logoColor=22d3ee)](https://github.com/twolfekc/floodtest/pkgs/container/floodtest)
+[![Docker Image](https://img.shields.io/badge/ghcr.io-wolfebase%2Ffloodtest-0891b2?style=flat-square&logo=docker&logoColor=white)](https://github.com/wolfebase/floodtest/pkgs/container/floodtest)
+[![Image Size](https://img.shields.io/badge/image-~23MB-164e63?style=flat-square&logo=docker&logoColor=22d3ee)](https://github.com/wolfebase/floodtest/pkgs/container/floodtest)
 [![Go](https://img.shields.io/badge/Go-1.25-00add8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-34d399?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/arch-amd64%20%7C%20arm64-a78bfa?style=flat-square)](https://github.com/twolfekc/floodtest/pkgs/container/floodtest)
+[![Platform](https://img.shields.io/badge/arch-amd64%20%7C%20arm64-a78bfa?style=flat-square)](https://github.com/wolfebase/floodtest/pkgs/container/floodtest)
 
 <br/>
 
@@ -82,7 +82,7 @@ Built as a single Go binary with an embedded React dashboard, it runs in a 23MB 
 **One command to install and run:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/wolfebase/floodtest/main/install.sh | sudo bash
 ```
 
 Then open **http://your-server-ip:7860** in your browser.
@@ -94,7 +94,7 @@ Then open **http://your-server-ip:7860** in your browser.
 ```yaml
 services:
   floodtest:
-    image: ghcr.io/twolfekc/floodtest:latest
+    image: ghcr.io/wolfebase/floodtest:latest
     container_name: floodtest
     restart: unless-stopped
     ports:
@@ -121,7 +121,7 @@ docker compose up -d
 <br/>
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/update.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/wolfebase/floodtest/main/update.sh | sudo bash
 ```
 
 Or let FloodTest update itself from the **Updates** page in the UI.
@@ -244,7 +244,7 @@ Upload testing also works without B2 using built-in HTTP endpoints (Cloudflare, 
 ## Unraid
 
 1. Add the container via Docker Compose or Unraid's Docker UI
-2. Image: `ghcr.io/twolfekc/floodtest:latest`
+2. Image: `ghcr.io/wolfebase/floodtest:latest`
 3. Map port **7860**
 4. Create a path mapping for `/data` to persist settings and history
 5. Mount the Docker socket at `/var/run/docker.sock` for self-update
@@ -285,6 +285,6 @@ go build -o wansaturator ./cmd/server
 
 <br/>
 
-[![GitHub](https://img.shields.io/badge/GitHub-twolfekc%2Ffloodtest-1e293b?style=flat-square&logo=github&logoColor=white)](https://github.com/twolfekc/floodtest)
+[![GitHub](https://img.shields.io/badge/GitHub-wolfebase%2Ffloodtest-1e293b?style=flat-square&logo=github&logoColor=white)](https://github.com/wolfebase/floodtest)
 
 </div>
