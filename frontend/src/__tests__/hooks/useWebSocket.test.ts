@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useWebSocket } from '../../hooks/useWebSocket'
 
@@ -22,6 +22,11 @@ beforeEach(() => {
   MockWebSocket.instances = []
   vi.stubGlobal('WebSocket', MockWebSocket as unknown)
   vi.useFakeTimers()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 describe('useWebSocket', () => {

@@ -72,7 +72,7 @@ func TestRecentHistory_ZeroSeconds(t *testing.T) {
 	}
 }
 
-func TestRateLoop_ComputesRate(t *testing.T) {
+func TestRateComputation(t *testing.T) {
 	c, _ := testCollector(t)
 
 	// Simulate what rateLoop does: add bytes, swap, compute bits.

@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"database/sql"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -23,6 +24,7 @@ func testDB(t *testing.T) *sql.DB {
 }
 
 type mockController struct {
+	mu         sync.Mutex
 	running    atomic.Bool
 	startCalls int
 	stopCalls  int
@@ -31,6 +33,8 @@ type mockController struct {
 }
 
 func (m *mockController) StartEngines(_ context.Context, dl, ul int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.running.Store(true)
 	m.startCalls++
 	m.lastDlMbps = dl
@@ -39,6 +43,8 @@ func (m *mockController) StartEngines(_ context.Context, dl, ul int) error {
 }
 
 func (m *mockController) StopEngines() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.running.Store(false)
 	m.stopCalls++
 }
@@ -112,6 +118,32 @@ func TestValidateSchedule_ZeroDownload(t *testing.T) {
 	}
 	if err := ValidateSchedule(sc); err == nil {
 		t.Fatal("expected error for zero download, got nil")
+	}
+}
+
+func TestValidateSchedule_ZeroUpload(t *testing.T) {
+	sc := Schedule{
+		DaysOfWeek:   []int{1},
+		StartTime:    "09:00",
+		EndTime:      "17:00",
+		DownloadMbps: 500,
+		UploadMbps:   0,
+	}
+	if err := ValidateSchedule(sc); err == nil {
+		t.Fatal("expected error for zero upload, got nil")
+	}
+}
+
+func TestValidateSchedule_NegativeDay(t *testing.T) {
+	sc := Schedule{
+		DaysOfWeek:   []int{-1},
+		StartTime:    "09:00",
+		EndTime:      "17:00",
+		DownloadMbps: 500,
+		UploadMbps:   100,
+	}
+	if err := ValidateSchedule(sc); err == nil {
+		t.Fatal("expected error for day=-1, got nil")
 	}
 }
 

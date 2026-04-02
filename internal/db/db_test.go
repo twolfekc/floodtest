@@ -27,6 +27,26 @@ func TestOpenDB_CreatesSchema(t *testing.T) {
 	if _, err := db.Exec("INSERT INTO usage_counters (period, download_bytes, upload_bytes) VALUES ('2026-04', 0, 0)"); err != nil {
 		t.Fatalf("insert into usage_counters: %v", err)
 	}
+
+	// Verify schedules table exists by inserting a row.
+	if _, err := db.Exec("INSERT INTO schedules (days_of_week, start_time, end_time, download_mbps, upload_mbps, enabled) VALUES ('[1,2,3]', '09:00', '17:00', 500, 100, 1)"); err != nil {
+		t.Fatalf("insert into schedules: %v", err)
+	}
+
+	// Verify throughput_history table exists by inserting a row.
+	if _, err := db.Exec("INSERT INTO throughput_history (timestamp, download_bytes, upload_bytes) VALUES (datetime('now'), 1000, 500)"); err != nil {
+		t.Fatalf("insert into throughput_history: %v", err)
+	}
+
+	// Verify throttle_events table exists by inserting a row.
+	if _, err := db.Exec("INSERT INTO throttle_events (timestamp, direction, target_bps, actual_bps) VALUES (datetime('now'), 'download', 1000000, 500000)"); err != nil {
+		t.Fatalf("insert into throttle_events: %v", err)
+	}
+
+	// Verify update_history table exists by inserting a row.
+	if _, err := db.Exec("INSERT INTO update_history (previous_digest, new_digest, status) VALUES ('sha256:old', 'sha256:new', 'success')"); err != nil {
+		t.Fatalf("insert into update_history: %v", err)
+	}
 }
 
 func TestOpenDB_IndependentInstances(t *testing.T) {

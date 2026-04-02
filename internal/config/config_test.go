@@ -19,6 +19,14 @@ func testDB(t *testing.T) *sql.DB {
 }
 
 func TestNew_Defaults(t *testing.T) {
+	t.Setenv("WEB_PORT", "")
+	t.Setenv("DEFAULT_DOWNLOAD_SPEED", "")
+	t.Setenv("DEFAULT_UPLOAD_SPEED", "")
+	t.Setenv("B2_KEY_ID", "")
+	t.Setenv("B2_APP_KEY", "")
+	t.Setenv("B2_BUCKET_NAME", "")
+	t.Setenv("B2_ENDPOINT", "")
+
 	d := testDB(t)
 	cfg := New(d)
 	s := cfg.Get()

@@ -32,11 +32,11 @@ test.describe('Schedule', () => {
 
 test.describe('Charts', () => {
   test('loads charts page without error', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('link', { name: /charts/i }).click()
     const errors: string[] = []
     page.on('pageerror', e => errors.push(e.message))
-    await page.waitForTimeout(1000)
+    await page.goto('/')
+    await page.getByRole('link', { name: /charts/i }).click()
+    await page.waitForLoadState('networkidle')
     expect(errors).toHaveLength(0)
   })
 })
