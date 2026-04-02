@@ -2,15 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { WsStats } from '../hooks/useWebSocket'
 import { api, UsageCounters } from '../api/client'
 import ServerHealth from './ServerHealth'
+import TrafficFlow from './TrafficFlow'
 
 interface DashboardProps {
   ws: { stats: WsStats; connected: boolean }
-}
-
-function formatSpeed(bps: number): string {
-  if (bps >= 1e9) return `${(bps / 1e9).toFixed(2)} Gbps`
-  if (bps >= 1e6) return `${(bps / 1e6).toFixed(2)} Mbps`
-  return `${(bps / 1e3).toFixed(2)} Kbps`
 }
 
 function formatBytes(bytes: number): string {
@@ -92,17 +87,6 @@ export default function Dashboard({ ws }: DashboardProps) {
   }
 
   const hasMeasurements = stats.measuredDownloadMbps > 0 || stats.measuredUploadMbps > 0
-
-  const downloadTargetMbps = Math.round(stats.measuredDownloadMbps * 0.9)
-  const uploadTargetMbps = Math.round(stats.measuredUploadMbps * 0.9)
-
-  const speedContextLine = (direction: 'download' | 'upload') => {
-    if (mode === 'max') return 'No limit'
-    const measured = direction === 'download' ? stats.measuredDownloadMbps : stats.measuredUploadMbps
-    const target = direction === 'download' ? downloadTargetMbps : uploadTargetMbps
-    if (!hasMeasurements) return 'Awaiting speed test...'
-    return `Target: ${target} Mbps (90% of ${Math.round(measured)} Mbps measured)`
-  }
 
   const statusLine = () => {
     if (!stats.running) {
@@ -313,70 +297,8 @@ export default function Dashboard({ ws }: DashboardProps) {
         </div>
       )}
 
-      {/* Speed cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Download speed */}
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">
-              Download
-            </span>
-            <svg
-              className="w-5 h-5 text-green-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 14l-7 7m0 0l-7-7m7 7V3"
-              />
-            </svg>
-          </div>
-          <div className="text-4xl font-bold text-green-400">
-            {formatSpeed(stats.downloadBps)}
-          </div>
-          <div className="mt-1 text-xs text-gray-500">
-            {speedContextLine('download')}
-          </div>
-          <div className="mt-2 text-sm text-gray-500">
-            {stats.downloadStreams} stream{stats.downloadStreams !== 1 ? 's' : ''}
-          </div>
-        </div>
-
-        {/* Upload speed */}
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">
-              Upload
-            </span>
-            <svg
-              className="w-5 h-5 text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 10l7-7m0 0l7 7m-7-7v18"
-              />
-            </svg>
-          </div>
-          <div className="text-4xl font-bold text-blue-400">
-            {formatSpeed(stats.uploadBps)}
-          </div>
-          <div className="mt-1 text-xs text-gray-500">
-            {speedContextLine('upload')}
-          </div>
-          <div className="mt-2 text-sm text-gray-500">
-            {stats.uploadStreams} stream{stats.uploadStreams !== 1 ? 's' : ''}
-          </div>
-        </div>
-      </div>
+      {/* Traffic flow diagram */}
+      <TrafficFlow stats={stats} />
 
       {/* Cumulative usage */}
       <div>

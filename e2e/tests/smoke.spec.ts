@@ -7,10 +7,9 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('button', { name: /start|stop/i })).toBeVisible()
   })
 
-  test('shows download and upload speed cards', async ({ page }) => {
+  test('shows traffic flow diagram', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText('Download', { exact: true })).toBeVisible()
-    await expect(page.getByText('Upload', { exact: true })).toBeVisible()
+    await expect(page.locator('canvas')).toBeVisible()
   })
 })
 
