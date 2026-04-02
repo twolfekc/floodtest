@@ -52,6 +52,8 @@ function statusColor(status: string): string {
       return 'bg-yellow-900/50 text-yellow-400 border-yellow-800'
     case 'failed':
       return 'bg-red-900/50 text-red-400 border-red-800'
+    case 'blocked':
+      return 'bg-red-900/50 text-red-400 border-red-800'
     default:
       return 'bg-gray-800 text-gray-400 border-gray-700'
   }
@@ -65,6 +67,8 @@ function rowBg(server: ServerHealthData): string {
       return 'bg-yellow-900/10'
     case 'failed':
       return 'bg-red-900/10'
+    case 'blocked':
+      return 'bg-red-950/20 opacity-60'
     default:
       return ''
   }
@@ -114,6 +118,22 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
     }
   }
 
+  const handleUnblock = async (url: string) => {
+    try {
+      await api.unblockServer(url)
+    } catch (err) {
+      console.error('Unblock failed:', err)
+    }
+  }
+
+  const handleUnblockAll = async () => {
+    try {
+      await api.unblockAll()
+    } catch (err) {
+      console.error('Unblock all failed:', err)
+    }
+  }
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
@@ -124,31 +144,36 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
   }
 
   const sorted = useMemo(() => {
-    const list = [...servers]
-    const dir = sortDir === 'asc' ? 1 : -1
-    list.sort((a, b) => {
+    return [...servers].sort((a, b) => {
+      // Three-tier: healthy/testing first, then cooldown, then blocked
+      const tierOrder: Record<string, number> = { healthy: 0, testing: 0, cooldown: 1, blocked: 2, failed: 2 }
+      const aTier = tierOrder[a.status] ?? 1
+      const bTier = tierOrder[b.status] ?? 1
+      if (aTier !== bTier) return aTier - bTier
+
+      // Within same tier, apply column sort
+      const dir = sortDir === 'asc' ? 1 : -1
+      let cmp = 0
       switch (sortKey) {
         case 'server':
-          return dir * formatUrl(a.url).localeCompare(formatUrl(b.url))
+          cmp = formatUrl(a.url).localeCompare(formatUrl(b.url)); break
         case 'location':
-          return dir * (a.location || '').localeCompare(b.location || '')
+          cmp = (a.location || '').localeCompare(b.location || ''); break
         case 'status': {
-          const order: Record<string, number> = { healthy: 0, testing: 1, cooldown: 2, failed: 3 }
-          return dir * ((order[a.status] ?? 4) - (order[b.status] ?? 4))
+          const order: Record<string, number> = { healthy: 0, testing: 1, cooldown: 2, failed: 3, blocked: 4 }
+          cmp = (order[a.status] ?? 5) - (order[b.status] ?? 5); break
         }
         case 'speed':
-          return dir * (a.speedBps - b.speedBps)
+          cmp = a.speedBps - b.speedBps; break
         case 'streams':
-          return dir * (a.activeStreams - b.activeStreams)
+          cmp = a.activeStreams - b.activeStreams; break
         case 'downloaded':
-          return dir * (a.bytesDownloaded - b.bytesDownloaded)
+          cmp = a.bytesDownloaded - b.bytesDownloaded; break
         case 'error':
-          return dir * (a.lastError || '').localeCompare(b.lastError || '')
-        default:
-          return 0
+          cmp = (a.lastError || '').localeCompare(b.lastError || ''); break
       }
+      return dir * cmp
     })
-    return list
   }, [servers, sortKey, sortDir])
 
   const maxSpeed = useMemo(() => {
@@ -160,8 +185,9 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
     const healthy = servers.filter((s) => s.status === 'healthy').length
     const cooldown = servers.filter((s) => s.status === 'cooldown').length
     const failed = servers.filter((s) => s.status === 'failed').length
+    const blocked = servers.filter((s) => s.status === 'blocked').length
     const testingCount = servers.filter((s) => s.status === 'testing').length
-    return { total, healthy, cooldown, failed, testing: testingCount }
+    return { total, healthy, cooldown, failed, blocked, testing: testingCount }
   }, [servers])
 
   const sortArrow = (key: SortKey) => {
@@ -205,6 +231,11 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
                 <span className="font-medium">{counts.failed}</span> Failed
               </span>
             )}
+            {counts.blocked > 0 && (
+              <span className="text-sm text-red-400">
+                <span className="font-medium">{counts.blocked}</span> Blocked
+              </span>
+            )}
             {counts.testing > 0 && (
               <span className="text-sm text-blue-400">
                 <span className="font-medium">{counts.testing}</span> Testing
@@ -217,6 +248,14 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
               <span className="text-xs text-gray-500">
                 Last test: {new Date(lastTestTime).toLocaleTimeString()}
               </span>
+            )}
+            {counts.blocked > 0 && (
+              <button
+                onClick={handleUnblockAll}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-800"
+              >
+                Unblock All ({counts.blocked})
+              </button>
             )}
             <button
               onClick={handleSpeedTest}
@@ -318,12 +357,23 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
                       <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
                         {formatBytes(server.bytesDownloaded)}
                       </td>
-                      <td className="px-4 py-3 text-red-400 text-xs max-w-[200px] truncate">
-                        {server.lastError
-                          ? server.lastError.length > 60
-                            ? server.lastError.slice(0, 60) + '...'
-                            : server.lastError
-                          : ''}
+                      <td className="px-4 py-3 text-xs max-w-[200px]">
+                        {server.status === 'blocked' ? (
+                          <button
+                            onClick={() => handleUnblock(server.url)}
+                            className="px-2 py-1 rounded text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-300"
+                          >
+                            Unblock
+                          </button>
+                        ) : (
+                          <span className="text-red-400 max-w-xs truncate">
+                            {server.lastError
+                              ? server.lastError.length > 60
+                                ? server.lastError.slice(0, 60) + '...'
+                                : server.lastError
+                              : ''}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   )

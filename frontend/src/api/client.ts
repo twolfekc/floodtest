@@ -82,6 +82,7 @@ export interface ServerHealth {
   url: string
   location: string
   healthy: boolean
+  blocked: boolean
   consecutiveFailures: number
   totalFailures: number
   totalDownloads: number
@@ -199,4 +200,11 @@ export const api = {
       body: JSON.stringify({ enabled, schedule }),
     }),
   getUpdateHistory: () => request<UpdateHistoryEntry[]>('/api/updates/history'),
+
+  // Server management
+  unblockServer: (url: string) => request<{ status: string }>('/api/server-unblock', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  }),
+  unblockAll: () => request<{ status: string; count: number }>('/api/server-unblock-all', { method: 'POST' }),
 }
