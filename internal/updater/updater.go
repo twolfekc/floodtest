@@ -182,13 +182,31 @@ func (u *Updater) ApplyUpdate(ctx context.Context) error {
 	}()
 
 	log.Println("updater: pulling latest image...")
-	reader, err := u.docker.ImagePull(ctx, u.imageName+":latest", image.PullOptions{})
-	if err != nil {
-		u.record(prev, "", "failed", err.Error())
-		return fmt.Errorf("pull image: %w", err)
+	// Use a generous timeout for image pull — multi-arch images can be large.
+	pullCtx, pullCancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer pullCancel()
+
+	var pullErr error
+	for attempt := 0; attempt < 2; attempt++ {
+		if attempt > 0 {
+			log.Printf("updater: retrying image pull (attempt %d)...", attempt+1)
+			time.Sleep(5 * time.Second)
+		}
+		reader, err := u.docker.ImagePull(pullCtx, u.imageName+":latest", image.PullOptions{})
+		if err != nil {
+			pullErr = err
+			log.Printf("updater: pull attempt %d failed: %v", attempt+1, err)
+			continue
+		}
+		io.Copy(io.Discard, reader)
+		reader.Close()
+		pullErr = nil
+		break
 	}
-	io.Copy(io.Discard, reader)
-	reader.Close()
+	if pullErr != nil {
+		u.record(prev, "", "failed", pullErr.Error())
+		return fmt.Errorf("pull image (after retries): %w", pullErr)
+	}
 
 	log.Println("updater: launching updater container...")
 
@@ -294,9 +312,13 @@ func (u *Updater) GetHistory() []UpdateHistoryEntry {
 func (u *Updater) ensureHelperImage(ctx context.Context) string {
 	candidates := []string{"docker:cli", "docker:27-cli", "docker:latest"}
 
+	// Use a background context with timeout — the HTTP request context may be too short.
+	helperCtx, helperCancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer helperCancel()
+
 	// First check if any candidate is already available locally.
 	for _, img := range candidates {
-		_, _, err := u.docker.ImageInspectWithRaw(ctx, img)
+		_, _, err := u.docker.ImageInspectWithRaw(helperCtx, img)
 		if err == nil {
 			log.Printf("updater: using existing helper image %s", img)
 			return img
@@ -306,7 +328,7 @@ func (u *Updater) ensureHelperImage(ctx context.Context) string {
 	// None available locally — try pulling each one.
 	for _, img := range candidates {
 		log.Printf("updater: pulling helper image %s...", img)
-		reader, err := u.docker.ImagePull(ctx, img, image.PullOptions{})
+		reader, err := u.docker.ImagePull(helperCtx, img, image.PullOptions{})
 		if err != nil {
 			log.Printf("updater: failed to pull %s: %v", img, err)
 			continue
