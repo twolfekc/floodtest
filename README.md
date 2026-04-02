@@ -1,86 +1,95 @@
 <div align="center">
 
-# FloodTest
+<img src="docs/assets/hero-banner.svg" alt="FloodTest — WAN Throughput Testing" width="100%"/>
 
-**ISP Throttle Detection Tool**
+<br/>
 
-Saturates your WAN connection in both directions to detect if your ISP throttles after sustained heavy usage.
+**Detect ISP throttling. Saturate your WAN. Know the truth.**
 
-[![Docker Image](https://img.shields.io/badge/ghcr.io-floodtest-blue?logo=docker&logoColor=white)](https://github.com/twolfekc/floodtest/pkgs/container/floodtest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-linux%20%7C%20docker-lightgrey)](https://github.com/twolfekc/floodtest)
-[![Image Size](https://img.shields.io/badge/image%20size-~23MB-blue)](https://github.com/twolfekc/floodtest/pkgs/container/floodtest)
+<br/>
+
+[![Docker Image](https://img.shields.io/badge/ghcr.io-twolfekc%2Ffloodtest-0891b2?style=flat-square&logo=docker&logoColor=white)](https://github.com/twolfekc/floodtest/pkgs/container/floodtest)
+[![Image Size](https://img.shields.io/badge/image-~23MB-164e63?style=flat-square&logo=docker&logoColor=22d3ee)](https://github.com/twolfekc/floodtest/pkgs/container/floodtest)
+[![Go](https://img.shields.io/badge/Go-1.25-00add8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
+[![License: MIT](https://img.shields.io/badge/license-MIT-34d399?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/arch-amd64%20%7C%20arm64-a78bfa?style=flat-square)](https://github.com/twolfekc/floodtest/pkgs/container/floodtest)
+
+<br/>
 
 </div>
 
 ---
 
-## What It Does
+FloodTest generates **real WAN traffic** that registers on your ISP's usage meter. It downloads from 22+ global speed test servers and uploads via HTTP/S3 simultaneously, logging throughput over time to detect exactly when your ISP starts throttling.
 
-FloodTest generates **real WAN traffic** that registers on your ISP's usage meter. It downloads from 22+ public speed test servers worldwide and uploads to Backblaze B2 cloud storage simultaneously, logging throughput over time to detect if and when your ISP starts throttling.
+Built as a single Go binary with an embedded React dashboard, it runs in a 23MB Docker container and manages itself -- including automatic updates.
 
-| | Feature |
-|---|---|
-| :arrow_down: | **Download saturation** — 22+ global speed test servers with automatic rotation and failover |
-| :arrow_up: | **Upload saturation** — Backblaze B2 free-tier uploads, objects deleted immediately |
-| :chart_with_upwards_trend: | **Real-time dashboard** — Live throughput, server health, cumulative usage |
-| :bar_chart: | **Historical charts** — 90 days of throughput history with throttle event overlay |
-| :rotating_light: | **Throttle detection** — Automatic alerts when speed drops below your target |
-| :green_circle: | **Server health** — See which download servers are healthy, blocked, or cooling down |
-| :calendar: | **Scheduler** — Automate test runs by day and time |
-| :control_knobs: | **Rate limiting** — Set precise bandwidth targets per direction |
-| :arrows_counterclockwise: | **Auto-updates** — Check for updates in the UI, schedule automatic updates (daily/weekly/monthly) |
-| :package: | **Self-contained** — Single 23MB Docker container, no external dependencies |
+<br/>
+
+## Features
+
+<table>
+<tr>
+<td align="center" width="25%">
+<img src="docs/assets/icon-speed.svg" width="48" height="48" alt="Speed"/>
+<br/>
+<strong>Bandwidth Saturation</strong>
+<br/>
+<sub>Parallel download from 22+ CDNs with upload to B2/HTTP targets. Auto-adjusts stream count to hit your target speed.</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/icon-throttle.svg" width="48" height="48" alt="Throttle Detection"/>
+<br/>
+<strong>Throttle Detection</strong>
+<br/>
+<sub>Rolling-average monitoring with configurable thresholds. Get alerted when your ISP silently drops your speed.</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/icon-schedule.svg" width="48" height="48" alt="Scheduler"/>
+<br/>
+<strong>Automated Scheduling</strong>
+<br/>
+<sub>Run tests on your schedule -- by day and time. Manual override always available from the dashboard.</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/icon-update.svg" width="48" height="48" alt="Self-Update"/>
+<br/>
+<strong>Self-Updating</strong>
+<br/>
+<sub>Checks GHCR for new images and updates itself via Docker socket. Zero-downtime, no SSH required.</sub>
+</td>
+</tr>
+</table>
+
+<br/>
+
+|  | Capability |
+|:---|:---|
+| **Real-time Dashboard** | Live throughput via WebSocket, updated every second |
+| **Historical Charts** | 90 days of throughput history with throttle event overlay |
+| **Smart Auto-Modes** | *Reliable* (90% ISP capacity) or *Max* (full saturation) |
+| **Server Health** | Exponential backoff on failures, auto-block at 5 consecutive errors |
+| **ISP Speed Test** | Built-in speed test to calibrate your actual line speed |
+| **Multi-direction** | Simultaneous download + upload testing |
+| **Rate Limiting** | Precise per-direction bandwidth targets |
+
+<br/>
 
 ---
 
-## Install (Ubuntu)
+## Quick Start
+
+**One command to install and run:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/install.sh | sudo bash
 ```
 
-Installs Docker (if needed), opens the firewall port, and starts FloodTest on port **7860**.
-
-Open `http://your-server-ip:7860` to configure.
-
-## Update
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/update.sh | sudo bash
-```
-
-Pulls the latest image and restarts. Settings, schedules, and history are preserved.
-
----
-
-## System Requirements
-
-| | Minimum | Recommended (1 Gbps) | Recommended (5+ Gbps) |
-|---|---|---|---|
-| **CPU** | 1 core | 2 cores | 4+ cores |
-| **RAM** | 512 MB | 1 GB | 2 GB |
-| **Disk** | 1 GB | 2 GB | 2 GB |
-| **Network** | Any WAN connection | 1 Gbps symmetric | 5-10 Gbps symmetric |
-
-**Notes:**
-- CPU is the main bottleneck at high speeds — each parallel download stream needs its own goroutine
-- Disk is only used for the SQLite database (settings + 90 days of history). All download data goes to `/dev/null` and upload data is generated in memory
-- Must have real WAN connectivity (not NAT loopback)
-- **OS**: Ubuntu 20.04+ (install script), any Linux with Docker (manual install), Unraid, macOS (dev only)
-
----
-
-## Manual Install
+Then open **http://your-server-ip:7860** in your browser.
 
 <details>
-<summary>If you already have Docker and Docker Compose</summary>
-
-```bash
-mkdir -p /opt/floodtest && cd /opt/floodtest
-```
-
-Create a `docker-compose.yml`:
+<summary><strong>Manual Docker Compose</strong></summary>
+<br/>
 
 ```yaml
 services:
@@ -92,95 +101,143 @@ services:
       - "7860:7860"
     volumes:
       - floodtest-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock   # for self-update
     environment:
       - DATA_DIR=/data
+      - COMPOSE_DIR=/opt/floodtest
 
 volumes:
   floodtest-data:
 ```
 
-Then:
-
 ```bash
 docker compose up -d
 ```
 
-Open `http://localhost:7860` in your browser.
+</details>
+
+<details>
+<summary><strong>Update an existing installation</strong></summary>
+<br/>
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/twolfekc/floodtest/main/update.sh | sudo bash
+```
+
+Or let FloodTest update itself from the **Updates** page in the UI.
 
 </details>
+
+<br/>
+
+---
+
+## Architecture
+
+<div align="center">
+
+<img src="docs/assets/architecture.svg" alt="FloodTest Architecture" width="100%"/>
+
+</div>
+
+<br/>
+
+| Layer | Technology |
+|:---|:---|
+| **Backend** | Go -- goroutine pools for high-concurrency streaming |
+| **Frontend** | React 18 + TypeScript + Tailwind CSS + Recharts |
+| **Database** | SQLite with WAL mode (persisted in Docker volume) |
+| **Real-time** | WebSocket push every 1 second |
+| **Container** | 23MB distroless image (multi-arch: amd64 + arm64) |
+| **Delivery** | Single binary, frontend embedded via `go:embed` |
+
+<br/>
+
+---
+
+## How It Works
+
+### Download Engine
+
+Downloads large files (1-10 GB) from 22+ public speed test servers in parallel, discarding data to `/dev/null`. Automatically rotates between servers with exponential backoff (5 min to 30 min cap) when one fails or blocks. An auto-adjust goroutine monitors throughput every 10 seconds and spins up additional streams if below 80% of target (up to 64 concurrent).
+
+### Upload Engine
+
+Generates random data in memory and uploads via the S3-compatible API or HTTP endpoints. Each object is deleted immediately after upload, keeping storage at zero. Uses `io.Pipe` for zero-copy streaming. Supports Backblaze B2 (free ingress), Cloudflare speed test endpoints, and generic HTTP targets.
+
+### Throttle Detection
+
+Monitors a rolling average of throughput. When it drops below a configurable threshold (default 60%) of the target speed for more than 5 minutes, it logs a throttle event with timestamps, duration, and severity. Events are overlaid on the historical charts for visual correlation.
+
+### Server Health
+
+Each download server is independently tracked with failure counters, success rates, and latency. Failed connections trigger exponential backoff. Servers are auto-blocked after 5 consecutive failures, with one-click unblock from the UI.
+
+<br/>
+
+---
+
+## Screenshots
+
+> *Screenshots coming soon -- the UI features a dark-themed dashboard with real-time throughput gauges, historical charts, server health grid, and schedule manager.*
+
+<br/>
+
+---
+
+## Configuration
+
+All settings can be configured through the web UI. Environment variables override database values on startup.
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `WEB_PORT` | `7860` | Web UI and API port |
+| `DEFAULT_DOWNLOAD_SPEED` | `5000` | Download target in Mbps |
+| `DEFAULT_UPLOAD_SPEED` | `5000` | Upload target in Mbps |
+| `DATA_DIR` | `/data` | SQLite database directory |
+| `COMPOSE_DIR` | `/opt/floodtest` | Docker Compose file location (for self-update) |
+| `B2_KEY_ID` | | Backblaze B2 application key ID |
+| `B2_APP_KEY` | | Backblaze B2 application key |
+| `B2_BUCKET_NAME` | | B2 bucket name for uploads |
+| `B2_ENDPOINT` | `https://s3.us-west-002.backblazeb2.com` | B2 S3-compatible endpoint |
+
+<br/>
+
+---
+
+## System Requirements
+
+| | Minimum | 1 Gbps | 5+ Gbps |
+|:---|:---|:---|:---|
+| **CPU** | 1 core | 2 cores | 4+ cores |
+| **RAM** | 512 MB | 1 GB | 2 GB |
+| **Disk** | 1 GB | 2 GB | 2 GB |
+| **Network** | Any WAN | 1 Gbps symmetric | 5-10 Gbps symmetric |
+
+> **Note:** CPU is the main bottleneck at high speeds. Disk is only used for the SQLite database -- all download data goes to `/dev/null` and upload data is generated in memory.
+
+<br/>
 
 ---
 
 ## Backblaze B2 Setup
 
 <details>
-<summary>How to create a free B2 account for uploads</summary>
+<summary><strong>Optional -- enables upload testing via S3 API</strong></summary>
+<br/>
 
-FloodTest uses Backblaze B2 for uploads because ingress is free and unlimited:
+FloodTest can use Backblaze B2 for uploads because ingress is **free and unlimited**.
 
-1. Create a [Backblaze B2 account](https://www.backblaze.com/b2/sign-up.html) (free)
-2. Create a bucket:
-   - Go to **Buckets** → **Create a Bucket**
-   - Name it something like `floodtest-uploads`
-   - Set to **Private**
-3. Create an Application Key:
-   - Go to **Application Keys** → **Add a New Application Key**
-   - Restrict it to the bucket you created
-   - Save the **keyID** and **applicationKey** (shown only once)
-4. Enter these credentials in the FloodTest setup wizard
+1. Create a free [Backblaze B2 account](https://www.backblaze.com/b2/sign-up.html)
+2. Create a private bucket (e.g., `floodtest-uploads`)
+3. Generate an Application Key restricted to that bucket
+4. Enter the credentials in the FloodTest Settings page
+
+Upload testing also works without B2 using built-in HTTP endpoints (Cloudflare, Tele2).
 
 </details>
 
----
-
-## How It Works
-
-<details>
-<summary>Architecture and engine details</summary>
-
-### Download Engine
-Downloads large files (1-10GB) from 22+ public speed test servers in parallel, discarding data to `/dev/null`. Automatically rotates between servers with exponential backoff when one fails or blocks.
-
-### Upload Engine
-Generates random data in memory and uploads to B2 via the S3-compatible API. Each object is deleted immediately after upload, keeping storage at ~0. Uses `io.Pipe` for zero-copy streaming.
-
-### Throttle Detection
-Monitors rolling average throughput. When it drops below a configurable percentage (default 60%) of the target speed for more than 5 minutes, it logs a throttle event with timestamps and duration.
-
-### Server Health
-Each download server is independently tracked. Failed connections trigger exponential backoff (5min → 10min → 20min → 30min cap). The dashboard shows real-time server status.
-
-### Stack
-| Layer | Technology |
-|---|---|
-| Backend | Go — goroutines for high-concurrency streaming |
-| Frontend | React + TypeScript + Tailwind CSS + Recharts |
-| Database | SQLite (persisted in Docker volume) |
-| Real-time | WebSocket push every 1 second |
-| Container | 23MB distroless image (multi-arch: amd64 + arm64) |
-
-</details>
-
----
-
-## Environment Variables
-
-<details>
-<summary>All configurable options</summary>
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `B2_KEY_ID` | | Backblaze B2 application key ID |
-| `B2_APP_KEY` | | Backblaze B2 application key |
-| `B2_BUCKET_NAME` | | B2 bucket name |
-| `B2_ENDPOINT` | `https://s3.us-west-002.backblazeb2.com` | B2 S3-compatible endpoint |
-| `WEB_PORT` | `7860` | Web UI port |
-| `DEFAULT_DOWNLOAD_SPEED` | `5000` | Default download target (Mbps) |
-| `DEFAULT_UPLOAD_SPEED` | `5000` | Default upload target (Mbps) |
-
-All settings can also be configured through the web UI.
-
-</details>
+<br/>
 
 ---
 
@@ -190,20 +247,44 @@ All settings can also be configured through the web UI.
 2. Image: `ghcr.io/twolfekc/floodtest:latest`
 3. Map port **7860**
 4. Create a path mapping for `/data` to persist settings and history
-5. Configure through the web UI setup wizard
+5. Mount the Docker socket at `/var/run/docker.sock` for self-update
+6. Configure through the web UI
+
+<br/>
 
 ---
 
-## Docker Image
+## Contributing
+
+Contributions are welcome. The codebase is straightforward:
 
 ```
-ghcr.io/twolfekc/floodtest:latest
+cmd/server/         Go entrypoint, frontend embedding
+internal/           Backend packages (api, config, db, download, upload, stats, throttle, scheduler, updater)
+frontend/src/       React SPA (TypeScript, Tailwind, Recharts)
 ```
 
-Multi-architecture: `linux/amd64` and `linux/arm64`.
+```bash
+# Dev setup
+cd frontend && npm ci && npm run dev      # React dev server on :5173
+go run ./cmd/server                        # Go backend on :7860
+
+# Production build
+cd frontend && npm run build
+cp -r frontend/dist cmd/server/frontend/dist
+go build -o wansaturator ./cmd/server
+```
+
+<br/>
 
 ---
 
-## License
+<div align="center">
 
-MIT
+<sub>Built with Go, React, and a healthy distrust of ISPs.</sub>
+
+<br/>
+
+[![GitHub](https://img.shields.io/badge/GitHub-twolfekc%2Ffloodtest-1e293b?style=flat-square&logo=github&logoColor=white)](https://github.com/twolfekc/floodtest)
+
+</div>

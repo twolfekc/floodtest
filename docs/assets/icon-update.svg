@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="updateBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <filter id="updateGlow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.8; }
+    }
+    .spin-group {
+      transform-origin: 32px 32px;
+      animation: spin 4s linear infinite;
+    }
+    .dot-fade {
+      animation: fadeInOut 2s ease-in-out infinite;
+    }
+    .dot-fade-2 {
+      animation: fadeInOut 2s ease-in-out infinite;
+      animation-delay: -0.7s;
+    }
+    .dot-fade-3 {
+      animation: fadeInOut 2s ease-in-out infinite;
+      animation-delay: -1.4s;
+    }
+  </style>
+
+  <rect width="64" height="64" rx="12" fill="url(#updateBg)"/>
+
+  <!-- Rotating arrows -->
+  <g class="spin-group" filter="url(#updateGlow)">
+    <!-- Top-right arc with arrow -->
+    <path d="M32,14 A18,18 0 0,1 50,32" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"/>
+    <path d="M47,26 L50,32 L44,33" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Bottom-left arc with arrow -->
+    <path d="M32,50 A18,18 0 0,1 14,32" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"/>
+    <path d="M17,38 L14,32 L20,31" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Center dots (version indicator) -->
+  <g>
+    <circle class="dot-fade" cx="27" cy="32" r="2" fill="#34d399"/>
+    <circle class="dot-fade-2" cx="32" cy="32" r="2" fill="#34d399"/>
+    <circle class="dot-fade-3" cx="37" cy="32" r="2" fill="#34d399"/>
+  </g>
+</svg>

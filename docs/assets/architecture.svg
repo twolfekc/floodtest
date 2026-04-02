@@ -1,0 +1,237 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" width="860" height="520">
+  <defs>
+    <linearGradient id="archBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="cyanBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#164e63"/>
+      <stop offset="100%" style="stop-color:#0e3a4a"/>
+    </linearGradient>
+    <linearGradient id="violetBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b1f6e"/>
+      <stop offset="100%" style="stop-color:#2d1854"/>
+    </linearGradient>
+    <linearGradient id="emeraldBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#134e3a"/>
+      <stop offset="100%" style="stop-color:#0d3b2d"/>
+    </linearGradient>
+    <linearGradient id="slateBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#334155"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="amberBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#78350f"/>
+      <stop offset="100%" style="stop-color:#5c2a0a"/>
+    </linearGradient>
+    <filter id="archGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <marker id="arrowCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee" opacity="0.7"/>
+    </marker>
+    <marker id="arrowViolet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a78bfa" opacity="0.7"/>
+    </marker>
+    <marker id="arrowEmerald" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#34d399" opacity="0.7"/>
+    </marker>
+    <marker id="arrowSlate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" opacity="0.5"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" opacity="0.7"/>
+    </marker>
+  </defs>
+
+  <style>
+    @keyframes dataPulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    @keyframes dashMove {
+      0% { stroke-dashoffset: 20; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .data-flow-cyan {
+      stroke-dasharray: 6 4;
+      animation: dashMove 1.5s linear infinite;
+    }
+    .data-flow-violet {
+      stroke-dasharray: 6 4;
+      animation: dashMove 1.5s linear infinite reverse;
+    }
+    .data-flow-emerald {
+      stroke-dasharray: 6 4;
+      animation: dashMove 2s linear infinite;
+    }
+    .data-flow-amber {
+      stroke-dasharray: 6 4;
+      animation: dashMove 2s linear infinite;
+    }
+    .node-pulse {
+      animation: dataPulse 2.5s ease-in-out infinite;
+    }
+    .node-pulse-2 {
+      animation: dataPulse 2.5s ease-in-out infinite;
+      animation-delay: -0.8s;
+    }
+    .arch-label {
+      font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .arch-sublabel {
+      font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-size: 9px;
+      font-weight: 400;
+    }
+    .arch-title {
+      font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+  </style>
+
+  <!-- Background -->
+  <rect width="860" height="520" rx="12" fill="url(#archBg)"/>
+
+  <!-- Title -->
+  <text x="430" y="35" text-anchor="middle" class="arch-title" fill="#94a3b8">ARCHITECTURE</text>
+
+  <!-- ===== EXTERNAL SOURCES (Left) ===== -->
+
+  <!-- Download Servers -->
+  <rect x="30" y="100" width="140" height="60" rx="8" fill="url(#cyanBox)" stroke="#22d3ee" stroke-width="1" opacity="0.9"/>
+  <text x="100" y="125" text-anchor="middle" class="arch-label" fill="#22d3ee">Download Servers</text>
+  <text x="100" y="140" text-anchor="middle" class="arch-sublabel" fill="#67e8f9">22+ global CDNs</text>
+
+  <!-- Upload Targets -->
+  <rect x="30" y="280" width="140" height="60" rx="8" fill="url(#violetBox)" stroke="#a78bfa" stroke-width="1" opacity="0.9"/>
+  <text x="100" y="305" text-anchor="middle" class="arch-label" fill="#a78bfa">Upload Targets</text>
+  <text x="100" y="320" text-anchor="middle" class="arch-sublabel" fill="#c4b5fd">B2 / HTTP / Local</text>
+
+  <!-- ===== GO BINARY (Center group) ===== -->
+
+  <!-- Go binary container -->
+  <rect x="220" y="60" width="400" height="400" rx="12" fill="none" stroke="#475569" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+  <text x="420" y="82" text-anchor="middle" class="arch-sublabel" fill="#64748b" letter-spacing="3">GO BINARY</text>
+
+  <!-- Download Engine -->
+  <rect x="245" y="105" width="150" height="50" rx="8" fill="url(#cyanBox)" stroke="#22d3ee" stroke-width="1" opacity="0.9"/>
+  <text x="320" y="128" text-anchor="middle" class="arch-label" fill="#22d3ee">Download Engine</text>
+  <text x="320" y="142" text-anchor="middle" class="arch-sublabel" fill="#67e8f9">goroutine pool</text>
+
+  <!-- Upload Engine -->
+  <rect x="245" y="285" width="150" height="50" rx="8" fill="url(#violetBox)" stroke="#a78bfa" stroke-width="1" opacity="0.9"/>
+  <text x="320" y="308" text-anchor="middle" class="arch-label" fill="#a78bfa">Upload Engine</text>
+  <text x="320" y="322" text-anchor="middle" class="arch-sublabel" fill="#c4b5fd">goroutine pool</text>
+
+  <!-- Stats Collector -->
+  <rect x="345" y="190" width="130" height="55" rx="8" fill="url(#emeraldBox)" stroke="#34d399" stroke-width="1" opacity="0.9"/>
+  <text x="410" y="213" text-anchor="middle" class="arch-label" fill="#34d399">Stats Collector</text>
+  <text x="410" y="228" text-anchor="middle" class="arch-sublabel" fill="#6ee7b7">atomic counters</text>
+
+  <!-- Throttle Detector -->
+  <rect x="245" y="190" width="90" height="55" rx="8" fill="url(#amberBox)" stroke="#fbbf24" stroke-width="1" opacity="0.9"/>
+  <text x="290" y="213" text-anchor="middle" class="arch-label" fill="#fbbf24">Throttle</text>
+  <text x="290" y="228" text-anchor="middle" class="arch-sublabel" fill="#fcd34d">detector</text>
+
+  <!-- API / WebSocket -->
+  <rect x="445" y="105" width="150" height="50" rx="8" fill="url(#slateBox)" stroke="#94a3b8" stroke-width="1" opacity="0.9"/>
+  <text x="520" y="128" text-anchor="middle" class="arch-label" fill="#e2e8f0">HTTP API</text>
+  <text x="520" y="142" text-anchor="middle" class="arch-sublabel" fill="#94a3b8">REST + WebSocket</text>
+
+  <!-- React SPA (embedded) -->
+  <rect x="445" y="285" width="150" height="50" rx="8" fill="url(#slateBox)" stroke="#94a3b8" stroke-width="1" opacity="0.9"/>
+  <text x="520" y="308" text-anchor="middle" class="arch-label" fill="#e2e8f0">React SPA</text>
+  <text x="520" y="322" text-anchor="middle" class="arch-sublabel" fill="#94a3b8">embedded via go:embed</text>
+
+  <!-- Scheduler -->
+  <rect x="245" y="380" width="150" height="45" rx="8" fill="url(#slateBox)" stroke="#94a3b8" stroke-width="1" opacity="0.9"/>
+  <text x="320" y="403" text-anchor="middle" class="arch-label" fill="#e2e8f0">Scheduler</text>
+  <text x="320" y="416" text-anchor="middle" class="arch-sublabel" fill="#94a3b8">time/day matching</text>
+
+  <!-- SQLite -->
+  <rect x="445" y="380" width="150" height="45" rx="8" fill="url(#emeraldBox)" stroke="#34d399" stroke-width="1" opacity="0.9"/>
+  <text x="520" y="403" text-anchor="middle" class="arch-label" fill="#34d399">SQLite</text>
+  <text x="520" y="416" text-anchor="middle" class="arch-sublabel" fill="#6ee7b7">WAL mode, 90-day</text>
+
+  <!-- ===== BROWSER (Right) ===== -->
+
+  <!-- Browser -->
+  <rect x="680" y="100" width="140" height="60" rx="8" fill="url(#slateBox)" stroke="#e2e8f0" stroke-width="1" opacity="0.9"/>
+  <text x="750" y="125" text-anchor="middle" class="arch-label" fill="#e2e8f0">Browser</text>
+  <text x="750" y="140" text-anchor="middle" class="arch-sublabel" fill="#94a3b8">Dashboard UI</text>
+
+  <!-- Docker / GHCR -->
+  <rect x="680" y="280" width="140" height="60" rx="8" fill="url(#slateBox)" stroke="#94a3b8" stroke-width="1" opacity="0.9"/>
+  <text x="750" y="305" text-anchor="middle" class="arch-label" fill="#e2e8f0">Docker / GHCR</text>
+  <text x="750" y="320" text-anchor="middle" class="arch-sublabel" fill="#94a3b8">self-update</text>
+
+  <!-- ===== CONNECTIONS ===== -->
+
+  <!-- Download Servers -> Download Engine -->
+  <line x1="170" y1="130" x2="243" y2="130" class="data-flow-cyan" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+
+  <!-- Upload Engine -> Upload Targets -->
+  <line x1="243" y1="310" x2="172" y2="310" class="data-flow-violet" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowViolet)"/>
+
+  <!-- Download Engine -> Stats -->
+  <line x1="370" y1="155" x2="395" y2="188" class="data-flow-emerald" stroke="#34d399" stroke-width="1" marker-end="url(#arrowEmerald)"/>
+
+  <!-- Upload Engine -> Stats -->
+  <line x1="370" y1="285" x2="395" y2="247" class="data-flow-emerald" stroke="#34d399" stroke-width="1" marker-end="url(#arrowEmerald)"/>
+
+  <!-- Stats -> Throttle -->
+  <line x1="345" y1="217" x2="337" y2="217" stroke="#fbbf24" stroke-width="1" opacity="0.5" marker-end="url(#arrowAmber)"/>
+
+  <!-- Stats -> API/WebSocket -->
+  <line x1="460" y1="200" x2="510" y2="157" class="data-flow-emerald" stroke="#34d399" stroke-width="1" marker-end="url(#arrowEmerald)"/>
+
+  <!-- API -> Browser (WebSocket) -->
+  <line x1="597" y1="130" x2="678" y2="130" class="data-flow-emerald" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowEmerald)"/>
+  <text x="638" y="122" text-anchor="middle" class="arch-sublabel" fill="#34d399" opacity="0.7">WS 1s</text>
+
+  <!-- Stats -> SQLite -->
+  <line x1="450" y1="247" x2="500" y2="378" stroke="#34d399" stroke-width="1" opacity="0.4" stroke-dasharray="3 3" marker-end="url(#arrowEmerald)"/>
+  <text x="460" y="320" text-anchor="middle" class="arch-sublabel" fill="#34d399" opacity="0.5">60s</text>
+
+  <!-- Scheduler -> Engines (control) -->
+  <path d="M295,380 L295,337" stroke="#94a3b8" stroke-width="1" opacity="0.4" stroke-dasharray="3 3" marker-end="url(#arrowSlate)"/>
+  <path d="M345,380 L345,157" stroke="#94a3b8" stroke-width="1" opacity="0.4" stroke-dasharray="3 3" marker-end="url(#arrowSlate)"/>
+
+  <!-- React SPA <- API (embedded serving) -->
+  <line x1="520" y1="283" x2="520" y2="157" stroke="#94a3b8" stroke-width="1" opacity="0.3" stroke-dasharray="3 3"/>
+
+  <!-- Pulsing activity dots -->
+  <circle class="node-pulse" cx="207" cy="130" r="3" fill="#22d3ee" filter="url(#archGlow)"/>
+  <circle class="node-pulse-2" cx="207" cy="310" r="3" fill="#a78bfa" filter="url(#archGlow)"/>
+  <circle class="node-pulse" cx="638" cy="130" r="3" fill="#34d399" filter="url(#archGlow)"/>
+
+  <!-- Legend -->
+  <g transform="translate(30, 470)">
+    <line x1="0" y1="0" x2="30" y2="0" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="38" y="4" class="arch-sublabel" fill="#67e8f9">download flow</text>
+
+    <line x1="140" y1="0" x2="170" y2="0" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="178" y="4" class="arch-sublabel" fill="#c4b5fd">upload flow</text>
+
+    <line x1="270" y1="0" x2="300" y2="0" stroke="#34d399" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="308" y="4" class="arch-sublabel" fill="#6ee7b7">stats / events</text>
+
+    <line x1="410" y1="0" x2="440" y2="0" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+    <text x="448" y="4" class="arch-sublabel" fill="#94a3b8">control</text>
+  </g>
+
+  <!-- Corner accents -->
+  <path d="M12,15 L12,7 L20,7" fill="none" stroke="#22d3ee" stroke-width="1" opacity="0.2"/>
+  <path d="M848,15 L848,7 L840,7" fill="none" stroke="#a78bfa" stroke-width="1" opacity="0.2"/>
+  <path d="M12,505 L12,513 L20,513" fill="none" stroke="#34d399" stroke-width="1" opacity="0.2"/>
+  <path d="M848,505 L848,513 L840,513" fill="none" stroke="#94a3b8" stroke-width="1" opacity="0.2"/>
+</svg>
