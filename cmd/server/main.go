@@ -148,6 +148,7 @@ func main() {
 			// A non-default value (> 10 Mbps) means the user configured it.
 			if cfgNow.DefaultDownloadMbps <= 10 && cfgNow.DefaultUploadMbps <= 10 {
 				log.Println("No speeds configured — running ISP speed test...")
+				eventBuf.Add("test", "ISP speed test starting")
 				ispTestRunning.Store(true)
 				result, err := speedtest.RunISPTest(ctx, func(phase string, pct int) {
 					ispTestPhase.Store(phase)
@@ -159,7 +160,10 @@ func main() {
 
 				if err != nil {
 					log.Printf("ISP speed test failed: %v — using config defaults", err)
+					eventBuf.Add("test", fmt.Sprintf("ISP speed test failed: %v", err))
 				} else {
+					eventBuf.Add("test", fmt.Sprintf("Download: %.0f Mbps", result.DownloadMbps))
+					eventBuf.Add("test", fmt.Sprintf("Upload: %.0f Mbps", result.UploadMbps))
 					dlMbps, ulMbps, err = autoConfigFromSpeedTest(result, cfg)
 					if err != nil {
 						log.Printf("Auto-config save failed: %v", err)
@@ -350,6 +354,7 @@ func main() {
 			stopEngines()
 			time.Sleep(2 * time.Second)
 		}
+		eventBuf.Add("test", "ISP speed test starting")
 		ispTestRunning.Store(true)
 		defer func() {
 			ispTestRunning.Store(false)
@@ -361,8 +366,11 @@ func main() {
 			ispTestProgress.Store(int32(pct))
 		})
 		if err != nil {
+			eventBuf.Add("test", fmt.Sprintf("ISP speed test failed: %v", err))
 			return nil, err
 		}
+		eventBuf.Add("test", fmt.Sprintf("Download: %.0f Mbps", result.DownloadMbps))
+		eventBuf.Add("test", fmt.Sprintf("Upload: %.0f Mbps", result.UploadMbps))
 		if _, _, err := autoConfigFromSpeedTest(result, cfg); err != nil {
 			return nil, err
 		}

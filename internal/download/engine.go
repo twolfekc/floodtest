@@ -330,6 +330,8 @@ func (e *Engine) autoAdjust(ctx context.Context) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
+	var lastMaxLog time.Time // throttle "at max streams" events to once per 60s
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -373,6 +375,16 @@ func (e *Engine) autoAdjust(ctx context.Context) {
 					toAdd, e.activeStreams.Load(), current/1_000_000, target/1_000_000)
 				if eb := e.eventBuf; eb != nil {
 					eb.Add("stream", fmt.Sprintf("+%d download stream(s) → %d total", toAdd, e.activeStreams.Load()))
+				}
+				lastMaxLog = time.Time{} // reset so next cap-hit is reported immediately
+			} else if current < target*80/100 && active >= maxConc {
+				if time.Since(lastMaxLog) >= 60*time.Second {
+					pct := current * 100 / target
+					log.Printf("download auto-adjust: at max streams (%d), %d%% of target", active, pct)
+					if eb := e.eventBuf; eb != nil {
+						eb.Add("adjust", fmt.Sprintf("at max download streams (%d), %d%% of target", active, pct))
+					}
+					lastMaxLog = time.Now()
 				}
 			}
 		}
