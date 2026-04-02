@@ -37,6 +37,61 @@ func TestUpdateSpeedScore(t *testing.T) {
 	sl.UpdateSpeedScore("http://unknown.com", 999)
 }
 
+func TestUploadServerAutoBlock(t *testing.T) {
+	sl := NewUploadServerList([]string{"http://a.com", "http://b.com"})
+
+	// 5 consecutive failures should auto-block
+	for i := 0; i < 5; i++ {
+		sl.MarkUnhealthy("http://a.com", "fail")
+	}
+	health := sl.HealthStatus()
+	if health[0].Status != "blocked" {
+		t.Errorf("expected blocked, got %s", health[0].Status)
+	}
+	if !health[0].Blocked {
+		t.Error("expected Blocked=true")
+	}
+}
+
+func TestUploadServerUnblock(t *testing.T) {
+	sl := NewUploadServerList([]string{"http://a.com", "http://b.com"})
+
+	for i := 0; i < 5; i++ {
+		sl.MarkUnhealthy("http://a.com", "fail")
+	}
+
+	ok := sl.UnblockServer("http://a.com")
+	if !ok {
+		t.Error("expected UnblockServer to return true")
+	}
+
+	health := sl.HealthStatus()
+	if health[0].Status != "healthy" {
+		t.Errorf("expected healthy after unblock, got %s", health[0].Status)
+	}
+}
+
+func TestUploadServerUnblockAll(t *testing.T) {
+	sl := NewUploadServerList([]string{"http://a.com", "http://b.com"})
+
+	for i := 0; i < 5; i++ {
+		sl.MarkUnhealthy("http://a.com", "fail")
+		sl.MarkUnhealthy("http://b.com", "fail")
+	}
+
+	count := sl.UnblockAll()
+	if count != 2 {
+		t.Errorf("expected 2 unblocked, got %d", count)
+	}
+
+	health := sl.HealthStatus()
+	for _, h := range health {
+		if h.Status != "healthy" {
+			t.Errorf("expected healthy, got %s for %s", h.Status, h.URL)
+		}
+	}
+}
+
 func TestUploadServerLocation(t *testing.T) {
 	sl := NewUploadServerList([]string{
 		"https://s3.us-west-002.backblazeb2.com/bucket",
