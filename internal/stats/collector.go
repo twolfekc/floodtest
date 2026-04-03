@@ -22,6 +22,9 @@ type Collector struct {
 	downloadBytes atomic.Int64
 	uploadBytes   atomic.Int64
 
+	peakDownloadBps atomic.Int64
+	peakUploadBps   atomic.Int64
+
 	mu            sync.RWMutex
 	currentRate   Snapshot
 	recentHistory []Snapshot // last 10 minutes of per-second snapshots
@@ -97,6 +100,18 @@ func (c *Collector) GetSessionStart() time.Time {
 	return c.sessionStart
 }
 
+// PeakRates returns the peak download and upload rates (bits per second)
+// observed since the last reset.
+func (c *Collector) PeakRates() (downloadBps, uploadBps int64) {
+	return c.peakDownloadBps.Load(), c.peakUploadBps.Load()
+}
+
+// ResetPeaks zeroes the peak rate counters, typically called on engine start.
+func (c *Collector) ResetPeaks() {
+	c.peakDownloadBps.Store(0)
+	c.peakUploadBps.Store(0)
+}
+
 // ResetSession resets the session usage counter and session start time.
 func (c *Collector) ResetSession() {
 	c.mu.Lock()
@@ -138,6 +153,13 @@ func (c *Collector) rateLoop(ctx context.Context) {
 				DownloadBps: dl * 8, // bytes -> bits per second
 				UploadBps:   ul * 8,
 				Timestamp:   t,
+			}
+
+			if snap.DownloadBps > c.peakDownloadBps.Load() {
+				c.peakDownloadBps.Store(snap.DownloadBps)
+			}
+			if snap.UploadBps > c.peakUploadBps.Load() {
+				c.peakUploadBps.Store(snap.UploadBps)
 			}
 
 			c.mu.Lock()

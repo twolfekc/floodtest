@@ -229,3 +229,108 @@ func TestGetSessionStart(t *testing.T) {
 		t.Fatalf("session start should be very recent, but was %v ago", elapsed)
 	}
 }
+
+func TestPeakRates_InitiallyZero(t *testing.T) {
+	c, _ := testCollector(t)
+
+	dlPeak, ulPeak := c.PeakRates()
+	if dlPeak != 0 {
+		t.Fatalf("expected 0 peak download, got %d", dlPeak)
+	}
+	if ulPeak != 0 {
+		t.Fatalf("expected 0 peak upload, got %d", ulPeak)
+	}
+}
+
+func TestPeakRates_TracksHighWaterMark(t *testing.T) {
+	c, _ := testCollector(t)
+
+	// Simulate rateLoop iterations with varying throughput.
+	// Iteration 1: 1000 bytes -> 8000 bps download, 500 bytes -> 4000 bps upload
+	simulateRateLoopIteration(c, 1000, 500)
+	dlPeak, ulPeak := c.PeakRates()
+	if dlPeak != 8000 {
+		t.Fatalf("after iter 1: expected peak download 8000, got %d", dlPeak)
+	}
+	if ulPeak != 4000 {
+		t.Fatalf("after iter 1: expected peak upload 4000, got %d", ulPeak)
+	}
+
+	// Iteration 2: higher download, lower upload — only download peak should update
+	simulateRateLoopIteration(c, 2000, 200)
+	dlPeak, ulPeak = c.PeakRates()
+	if dlPeak != 16000 {
+		t.Fatalf("after iter 2: expected peak download 16000, got %d", dlPeak)
+	}
+	if ulPeak != 4000 {
+		t.Fatalf("after iter 2: expected peak upload still 4000, got %d", ulPeak)
+	}
+
+	// Iteration 3: lower download, higher upload — only upload peak should update
+	simulateRateLoopIteration(c, 500, 1000)
+	dlPeak, ulPeak = c.PeakRates()
+	if dlPeak != 16000 {
+		t.Fatalf("after iter 3: expected peak download still 16000, got %d", dlPeak)
+	}
+	if ulPeak != 8000 {
+		t.Fatalf("after iter 3: expected peak upload 8000, got %d", ulPeak)
+	}
+}
+
+func TestPeakRates_ResetPeaks(t *testing.T) {
+	c, _ := testCollector(t)
+
+	simulateRateLoopIteration(c, 5000, 3000)
+	dlPeak, ulPeak := c.PeakRates()
+	if dlPeak == 0 || ulPeak == 0 {
+		t.Fatalf("peaks should be non-zero before reset: dl=%d ul=%d", dlPeak, ulPeak)
+	}
+
+	c.ResetPeaks()
+
+	dlPeak, ulPeak = c.PeakRates()
+	if dlPeak != 0 {
+		t.Fatalf("expected 0 peak download after reset, got %d", dlPeak)
+	}
+	if ulPeak != 0 {
+		t.Fatalf("expected 0 peak upload after reset, got %d", ulPeak)
+	}
+
+	// New peaks should track from zero again
+	simulateRateLoopIteration(c, 100, 200)
+	dlPeak, ulPeak = c.PeakRates()
+	if dlPeak != 800 {
+		t.Fatalf("expected peak download 800 after reset+new data, got %d", dlPeak)
+	}
+	if ulPeak != 1600 {
+		t.Fatalf("expected peak upload 1600 after reset+new data, got %d", ulPeak)
+	}
+}
+
+// simulateRateLoopIteration mimics what rateLoop does: adds bytes, swaps
+// counters, computes bps, updates peaks and current rate.
+func simulateRateLoopIteration(c *Collector, dlBytes, ulBytes int64) {
+	c.AddDownloadBytes(dlBytes)
+	c.AddUploadBytes(ulBytes)
+
+	dl := c.downloadBytes.Swap(0)
+	ul := c.uploadBytes.Swap(0)
+
+	snap := Snapshot{
+		DownloadBps: dl * 8,
+		UploadBps:   ul * 8,
+		Timestamp:   time.Now(),
+	}
+
+	if snap.DownloadBps > c.peakDownloadBps.Load() {
+		c.peakDownloadBps.Store(snap.DownloadBps)
+	}
+	if snap.UploadBps > c.peakUploadBps.Load() {
+		c.peakUploadBps.Store(snap.UploadBps)
+	}
+
+	c.mu.Lock()
+	c.currentRate = snap
+	c.recentHistory = append(c.recentHistory, snap)
+	c.mu.Unlock()
+}
