@@ -3,13 +3,13 @@ import { test, expect } from '@playwright/test'
 test.describe('Dashboard', () => {
   test('loads and shows mode selector', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'FloodTest', level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
     await expect(page.getByRole('button', { name: /launch|stop/i })).toBeVisible()
   })
 
-  test('shows traffic flow diagram', async ({ page }) => {
+  test('shows launch button on dashboard', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible()
+    await expect(page.getByRole('button', { name: /launch engine/i })).toBeVisible()
   })
 })
 
