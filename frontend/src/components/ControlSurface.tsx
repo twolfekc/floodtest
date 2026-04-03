@@ -95,17 +95,17 @@ export default function ControlSurface({ stats }: ControlSurfaceProps) {
       <div className="gradient-border glow-amber">
         <div className="gradient-border-inner p-5">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
                   <Zap size={20} className="text-amber-400" />
                 </div>
                 <div className="absolute inset-0 rounded-xl bg-amber-500/20 blur-lg animate-breathe" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-bold text-zinc-100">Ready to Launch</span>
+                  <span className="text-sm sm:text-base font-bold text-zinc-100">Ready to Launch</span>
                   <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
                     Standby
                   </span>
@@ -115,14 +115,14 @@ export default function ControlSurface({ stats }: ControlSurfaceProps) {
                 </span>
               </div>
             </div>
-            <ModeToggle mode={mode} onChange={handleModeChange} />
+            <ModeToggle mode={mode} onChange={handleModeChange} compact />
           </div>
 
           {/* ISP speed + schedule */}
-          <div className="flex items-center gap-6 mb-4 px-1">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-6 mb-4 px-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">ISP Speed</span>
-              <span className="font-mono text-sm text-zinc-300">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">ISP</span>
+              <span className="font-mono text-xs sm:text-sm text-zinc-300">
                 ↓{formatSpeed(stats.measuredDownloadMbps * 1e6)} / ↑{formatSpeed(stats.measuredUploadMbps * 1e6)}
               </span>
             </div>
@@ -175,22 +175,24 @@ export default function ControlSurface({ stats }: ControlSurfaceProps) {
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500 via-amber-500 to-emerald-500 animate-border-flow" style={{ backgroundSize: '200% 100%' }} />
 
       {/* Header bar */}
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06]">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-5 py-3 sm:py-3.5 border-b border-white/[0.06]">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="relative">
             <div className="w-3 h-3 rounded-full bg-emerald-500" />
             <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-40" />
           </div>
           <span className="text-sm font-bold text-zinc-100 capitalize">{mode}</span>
           <span className="text-zinc-600">·</span>
-          <span className="text-sm text-zinc-400 tabular-nums font-mono">{formatDuration(stats.uptimeSeconds)}</span>
+          <span className="text-xs sm:text-sm text-zinc-400 tabular-nums font-mono">{formatDuration(stats.uptimeSeconds)}</span>
         </div>
-        <div className="flex items-center gap-3">
-          <ModeToggle mode={mode} onChange={handleModeChange} compact />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden sm:block">
+            <ModeToggle mode={mode} onChange={handleModeChange} compact />
+          </div>
           <button
             onClick={handleToggle}
             disabled={toggling}
-            className="group flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all duration-200 disabled:opacity-50"
+            className="group flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all duration-200 disabled:opacity-50"
           >
             <Power size={14} />
             <span>{toggling ? '...' : 'Stop'}</span>
@@ -212,13 +214,13 @@ export default function ControlSurface({ stats }: ControlSurfaceProps) {
 
       {/* Three-column command grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:divide-x divide-white/[0.06]">
-        <div className="p-5">
+        <div className="p-3 sm:p-5">
           <ThroughputColumn stats={stats} mode={mode} sparkline={sparkline} />
         </div>
-        <div className="p-5 border-t md:border-t-0 border-white/[0.06]">
+        <div className="p-3 sm:p-5 border-t md:border-t-0 border-white/[0.06]">
           <ServerPoolColumn stats={stats} providerGroups={providerGroups} />
         </div>
-        <div className="p-5 border-t md:border-t-0 border-white/[0.06]">
+        <div className="p-3 sm:p-5 border-t md:border-t-0 border-white/[0.06]">
           <SessionMetrics stats={stats} events={stats.events || []} />
         </div>
       </div>

@@ -154,27 +154,27 @@ export default function Dashboard({ ws }: DashboardProps) {
   return (
     <div className="space-y-5 max-w-[1400px]">
       {/* Header row */}
-      <div className="flex items-center justify-between animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-fade-in">
         <div>
           <h1 className="text-xl font-bold text-zinc-100 tracking-tight">Dashboard</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Real-time throughput monitoring</p>
+          <p className="text-sm text-zinc-500 mt-0.5 hidden sm:block">Real-time throughput monitoring</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {stats.totalServers > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-forge-surface border border-forge-border">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-forge-surface border border-forge-border">
               <div className={`w-2 h-2 rounded-full ${
                 stats.healthyServers === stats.totalServers ? 'bg-emerald-500'
                 : stats.healthyServers < stats.totalServers * 0.5 ? 'bg-red-500'
                 : 'bg-yellow-500'
               } ${stats.healthyServers === stats.totalServers ? 'animate-pulse' : ''}`} />
-              <span className="text-xs text-zinc-400 font-mono">
-                {stats.healthyServers}/{stats.totalServers} servers
+              <span className="text-[10px] sm:text-xs text-zinc-400 font-mono">
+                {stats.healthyServers}/{stats.totalServers}
               </span>
             </div>
           )}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-forge-surface border border-forge-border">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-forge-surface border border-forge-border">
             <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-            <span className="text-xs text-zinc-400">{connected ? 'Live' : 'Disconnected'}</span>
+            <span className="text-[10px] sm:text-xs text-zinc-400">{connected ? 'Live' : 'Offline'}</span>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
-import { Gauge, BarChart3, Clock, Settings as SettingsIcon, RefreshCw, Server, Flame } from 'lucide-react'
+import { Gauge, BarChart3, Clock, Settings as SettingsIcon, RefreshCw, Server, Flame, Menu, X } from 'lucide-react'
 import { api } from './api/client'
 import { useWebSocket } from './hooks/useWebSocket'
 import Dashboard from './components/Dashboard'
@@ -12,48 +12,44 @@ const SetupWizard = lazy(() => import('./components/SetupWizard'))
 const UpdatesPage = lazy(() => import('./components/Updates'))
 const ServerHealth = lazy(() => import('./components/ServerHealth'))
 
-function Sidebar() {
+const mainNav = [
+  { to: '/', icon: Gauge, label: 'Dashboard' },
+  { to: '/charts', icon: BarChart3, label: 'Charts' },
+  { to: '/schedule', icon: Clock, label: 'Schedule' },
+  { to: '/servers', icon: Server, label: 'Servers' },
+]
+const bottomNav = [
+  { to: '/settings', icon: SettingsIcon, label: 'Settings' },
+  { to: '/updates', icon: RefreshCw, label: 'Updates' },
+]
+
+function NavItem({ to, icon: Icon, label, onClick }: { to: string; icon: typeof Gauge; label: string; onClick?: () => void }) {
   const location = useLocation()
-  const mainNav = [
-    { to: '/', icon: Gauge, label: 'Dashboard' },
-    { to: '/charts', icon: BarChart3, label: 'Charts' },
-    { to: '/schedule', icon: Clock, label: 'Schedule' },
-    { to: '/servers', icon: Server, label: 'Servers' },
-  ]
-  const bottomNav = [
-    { to: '/settings', icon: SettingsIcon, label: 'Settings' },
-    { to: '/updates', icon: RefreshCw, label: 'Updates' },
-  ]
-
-  const NavItem = ({ to, icon: Icon, label }: { to: string; icon: typeof Gauge; label: string }) => {
-    const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
-    return (
-      <NavLink
-        key={to}
-        to={to}
-        end={to === '/'}
-        className={`nav-indicator group relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-          isActive
-            ? 'active bg-amber-500/10 text-amber-400'
-            : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
-        }`}
-      >
-        <div className={`relative transition-transform duration-200 ${isActive ? '' : 'group-hover:scale-110'}`}>
-          <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
-          {isActive && (
-            <div className="absolute inset-0 blur-md bg-amber-500/40" />
-          )}
-        </div>
-        <span className="relative">{label}</span>
-        {isActive && (
-          <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-amber-500 animate-breathe" />
-        )}
-      </NavLink>
-    )
-  }
-
+  const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
   return (
-    <aside className="fixed top-0 left-0 h-screen w-56 glass border-r border-white/[0.06] flex flex-col z-40">
+    <NavLink
+      to={to}
+      end={to === '/'}
+      onClick={onClick}
+      className={`nav-indicator group relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+        isActive
+          ? 'active bg-amber-500/10 text-amber-400'
+          : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
+      }`}
+    >
+      <div className={`relative transition-transform duration-200 ${isActive ? '' : 'group-hover:scale-110'}`}>
+        <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
+        {isActive && <div className="absolute inset-0 blur-md bg-amber-500/40" />}
+      </div>
+      <span className="relative">{label}</span>
+      {isActive && <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-amber-500 animate-breathe" />}
+    </NavLink>
+  )
+}
+
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <>
       {/* Brand */}
       <div className="px-5 py-5 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
@@ -76,7 +72,7 @@ function Sidebar() {
           <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.15em]">Monitor</span>
         </div>
         {mainNav.map((item) => (
-          <NavItem key={item.to} {...item} />
+          <NavItem key={item.to} {...item} onClick={onNavigate} />
         ))}
       </nav>
 
@@ -86,7 +82,7 @@ function Sidebar() {
           <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.15em]">System</span>
         </div>
         {bottomNav.map((item) => (
-          <NavItem key={item.to} {...item} />
+          <NavItem key={item.to} {...item} onClick={onNavigate} />
         ))}
       </nav>
 
@@ -97,7 +93,65 @@ function Sidebar() {
           <span className="text-[10px] text-zinc-600 font-mono">System Online</span>
         </div>
       </div>
-    </aside>
+    </>
+  )
+}
+
+function Layout({ children }: { children: React.ReactNode }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const location = useLocation()
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
+  const closeMobile = useCallback(() => setMobileMenuOpen(false), [])
+
+  return (
+    <div className="min-h-screen bg-forge-base">
+      {/* Ambient background glow */}
+      <div className="fixed top-0 left-0 lg:left-56 right-0 h-[300px] bg-gradient-to-b from-amber-500/[0.03] to-transparent pointer-events-none" />
+
+      {/* Mobile top bar */}
+      <div className="fixed top-0 left-0 right-0 h-14 bg-forge-surface/90 backdrop-blur-lg border-b border-white/[0.06] flex items-center justify-between px-4 z-50 lg:hidden">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+            <Flame size={16} className="text-white" strokeWidth={2.5} />
+          </div>
+          <span className="text-sm font-bold text-gradient-fire">FloodTest</span>
+        </div>
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="w-9 h-9 rounded-lg bg-forge-raised flex items-center justify-center text-zinc-400 hover:text-zinc-200 transition-colors"
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      {/* Mobile menu overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={closeMobile}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <aside
+            className="absolute top-14 left-0 bottom-0 w-64 bg-forge-surface border-r border-white/[0.06] flex flex-col animate-slide-in-left overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SidebarContent onNavigate={closeMobile} />
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <aside className="fixed top-0 left-0 h-screen w-56 glass border-r border-white/[0.06] flex-col z-40 hidden lg:flex">
+        <SidebarContent />
+      </aside>
+
+      {/* Main content */}
+      <main className="pt-14 lg:pt-0 lg:ml-56 p-4 lg:p-6 relative">
+        {children}
+      </main>
+    </div>
   )
 }
 
@@ -143,23 +197,18 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-forge-base">
-        {/* Ambient background glow */}
-        <div className="fixed top-0 left-56 right-0 h-[300px] bg-gradient-to-b from-amber-500/[0.03] to-transparent pointer-events-none" />
-        <Sidebar />
-        <Suspense fallback={<ScreenLoader />}>
-          <main className="ml-56 p-6 relative">
-            <Routes>
-              <Route path="/" element={<Dashboard ws={ws} />} />
-              <Route path="/charts" element={<Charts />} />
-              <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/updates" element={<UpdatesPage />} />
-              <Route path="/servers" element={<ServerHealth />} />
-            </Routes>
-          </main>
-        </Suspense>
-      </div>
+      <Suspense fallback={<ScreenLoader />}>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard ws={ws} />} />
+            <Route path="/charts" element={<Charts />} />
+            <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/updates" element={<UpdatesPage />} />
+            <Route path="/servers" element={<ServerHealth />} />
+          </Routes>
+        </Layout>
+      </Suspense>
     </BrowserRouter>
   )
 }
