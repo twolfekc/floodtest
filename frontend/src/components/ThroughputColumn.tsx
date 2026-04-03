@@ -1,9 +1,10 @@
-import { ArrowDown, ArrowUp, Gauge, Zap } from 'lucide-react'
+import { ArrowDown, ArrowUp, Gauge, Zap, TrendingUp } from 'lucide-react'
 import { WsStats } from '../hooks/useWebSocket'
 
 interface ThroughputColumnProps {
   stats: WsStats
   mode: string
+  sparkline: number[]
 }
 
 function formatSpeed(bps: number): string {
@@ -12,21 +13,68 @@ function formatSpeed(bps: number): string {
   return `${(bps / 1_000_000).toFixed(0)} Mbps`
 }
 
-export default function ThroughputColumn({ stats, mode }: ThroughputColumnProps) {
-  const targetBps = stats.measuredDownloadMbps * 1_000_000 * 0.9
-  const efficiency = targetBps > 0 ? Math.min(100, Math.round((stats.downloadBps / targetBps) * 100)) : 0
+function formatBytes(bytes: number): string {
+  if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(2)} TB`
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`
+  return `${(bytes / 1e6).toFixed(1)} MB`
+}
+
+function MiniSparkline({ data, color, height = 32 }: { data: number[]; color: string; height?: number }) {
+  if (data.length < 2) return null
+  const max = Math.max(...data, 1)
+  const w = 200
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w
+    const y = height - (v / max) * (height - 2) - 1
+    return `${x},${y}`
+  }).join(' ')
+
+  // Build area fill path
+  const areaPath = `M0,${height} ` + data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w
+    const y = height - (v / max) * (height - 2) - 1
+    return `L${x},${y}`
+  }).join(' ') + ` L${w},${height} Z`
 
   return (
-    <div className="space-y-4">
+    <svg viewBox={`0 0 ${w} ${height}`} className="w-full" style={{ height }} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={`spark-${color}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#spark-${color})`} />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export default function ThroughputColumn({ stats, mode, sparkline }: ThroughputColumnProps) {
+  const targetBps = stats.measuredDownloadMbps * 1_000_000 * 0.9
+  const efficiency = targetBps > 0 ? Math.min(100, Math.round((stats.downloadBps / targetBps) * 100)) : 0
+  const peakDl = stats.peakDownloadBps ?? 0
+  const peakUl = stats.peakUploadBps ?? 0
+  const dlPeakPct = peakDl > 0 ? Math.min(100, Math.round((stats.downloadBps / peakDl) * 100)) : 0
+  const ulPeakPct = peakUl > 0 ? Math.min(100, Math.round((stats.uploadBps / peakUl) * 100)) : 0
+
+  // Calculate transfer rate (GB/hr)
+  const totalBytes = stats.sessionDownloadBytes + stats.sessionUploadBytes
+  const gbPerHour = stats.uptimeSeconds > 0
+    ? (totalBytes / 1e9) / (stats.uptimeSeconds / 3600)
+    : 0
+
+  return (
+    <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Gauge size={14} className="text-zinc-500" />
         <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Throughput</h3>
       </div>
 
-      <div className="space-y-3">
-        {/* Download speed */}
-        <div className="group">
-          <div className="flex items-center gap-2 mb-1">
+      {/* Speed displays */}
+      <div className="space-y-2">
+        <div>
+          <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded-md bg-orange-500/10 flex items-center justify-center">
               <ArrowDown size={12} className="text-orange-400" />
             </div>
@@ -34,14 +82,19 @@ export default function ThroughputColumn({ stats, mode }: ThroughputColumnProps)
               {formatSpeed(stats.downloadBps)}
             </span>
           </div>
-          {(stats.peakDownloadBps ?? 0) > 0 && (
-            <span className="text-[10px] text-zinc-600 font-mono ml-7">peak {formatSpeed(stats.peakDownloadBps!)}</span>
+          {/* Current vs Peak bar */}
+          {peakDl > 0 && (
+            <div className="ml-7 mt-1 flex items-center gap-2">
+              <div className="flex-1 h-1 bg-forge-raised rounded-full overflow-hidden">
+                <div className="h-full bg-orange-500/60 rounded-full transition-all duration-300" style={{ width: `${dlPeakPct}%` }} />
+              </div>
+              <span className="text-[10px] text-zinc-600 font-mono">{formatSpeed(peakDl)} pk</span>
+            </div>
           )}
         </div>
 
-        {/* Upload speed */}
-        <div className="group">
-          <div className="flex items-center gap-2 mb-1">
+        <div>
+          <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded-md bg-slate-500/10 flex items-center justify-center">
               <ArrowUp size={12} className="text-slate-400" />
             </div>
@@ -49,22 +102,34 @@ export default function ThroughputColumn({ stats, mode }: ThroughputColumnProps)
               {formatSpeed(stats.uploadBps)}
             </span>
           </div>
-          {(stats.peakUploadBps ?? 0) > 0 && (
-            <span className="text-[10px] text-zinc-600 font-mono ml-7">peak {formatSpeed(stats.peakUploadBps!)}</span>
+          {peakUl > 0 && (
+            <div className="ml-7 mt-1 flex items-center gap-2">
+              <div className="flex-1 h-1 bg-forge-raised rounded-full overflow-hidden">
+                <div className="h-full bg-slate-500/60 rounded-full transition-all duration-300" style={{ width: `${ulPeakPct}%` }} />
+              </div>
+              <span className="text-[10px] text-zinc-600 font-mono">{formatSpeed(peakUl)} pk</span>
+            </div>
           )}
         </div>
       </div>
 
+      {/* Sparkline */}
+      {sparkline.length > 2 && (
+        <div className="rounded-lg bg-forge-inset border border-white/[0.03] p-1.5 overflow-hidden">
+          <MiniSparkline data={sparkline} color="#f97316" height={28} />
+        </div>
+      )}
+
       {/* Efficiency bar */}
       {mode === 'reliable' && targetBps > 0 && (
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-zinc-500 font-mono">Target: {formatSpeed(targetBps)}</span>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="text-zinc-600 font-mono">Target: {formatSpeed(targetBps)}</span>
             <span className={`font-bold font-mono ${efficiency >= 90 ? 'text-emerald-400' : efficiency >= 70 ? 'text-amber-400' : 'text-red-400'}`}>
               {efficiency}%
             </span>
           </div>
-          <div className="relative h-2 bg-forge-raised rounded-full overflow-hidden">
+          <div className="relative h-1.5 bg-forge-raised rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
                 efficiency >= 90 ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
@@ -79,21 +144,27 @@ export default function ThroughputColumn({ stats, mode }: ThroughputColumnProps)
 
       {mode === 'max' && (
         <div className="flex items-center gap-1.5">
-          <Zap size={12} className="text-red-400" />
-          <span className="text-xs font-bold text-red-400 uppercase tracking-wider">Unlimited</span>
+          <Zap size={11} className="text-red-400" />
+          <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Unlimited</span>
         </div>
       )}
 
-      <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono pt-1 border-t border-white/[0.04]">
-        <span className="flex items-center gap-1">
-          <ArrowDown size={10} className="text-orange-400" />
-          {stats.downloadStreams}
-        </span>
-        <span className="flex items-center gap-1">
-          <ArrowUp size={10} className="text-slate-400" />
-          {stats.uploadStreams}
-        </span>
-        <span className="text-zinc-600">streams</span>
+      {/* Bottom metrics row */}
+      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.04]">
+        <div>
+          <div className="text-[9px] font-semibold text-zinc-600 uppercase tracking-wider">Streams</div>
+          <div className="text-xs font-mono text-zinc-300 flex items-center gap-1.5 mt-0.5">
+            <span className="text-orange-400">↓{stats.downloadStreams}</span>
+            <span className="text-slate-400">↑{stats.uploadStreams}</span>
+          </div>
+        </div>
+        <div>
+          <div className="text-[9px] font-semibold text-zinc-600 uppercase tracking-wider">Rate</div>
+          <div className="flex items-center gap-1 mt-0.5">
+            <TrendingUp size={10} className="text-zinc-500" />
+            <span className="text-xs font-mono text-zinc-300">{gbPerHour.toFixed(1)} GB/hr</span>
+          </div>
+        </div>
       </div>
     </div>
   )

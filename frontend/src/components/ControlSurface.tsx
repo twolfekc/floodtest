@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Zap, Power, Flame } from 'lucide-react'
 import { WsStats } from '../hooks/useWebSocket'
 import { api } from '../api/client'
-import { groupDownloadServers } from '../utils/providerGrouping'
+import { groupDownloadServers, ProviderGroup } from '../utils/providerGrouping'
 import ModeToggle from './ModeToggle'
 import ThroughputColumn from './ThroughputColumn'
 import ServerPoolColumn from './ServerPoolColumn'
-import EngineLog from './EngineLog'
+import SessionMetrics from './SessionMetrics'
 
 interface ControlSurfaceProps {
   stats: WsStats
@@ -27,27 +27,49 @@ function formatSpeed(bps: number): string {
   return `${(bps / 1_000_000).toFixed(0)} Mbps`
 }
 
+const MAX_SPARKLINE = 60
+
 export default function ControlSurface({ stats }: ControlSurfaceProps) {
   const [mode, setMode] = useState<string>('reliable')
   const [toggling, setToggling] = useState(false)
-  const [providerCount, setProviderCount] = useState(0)
+  const [providerGroups, setProviderGroups] = useState<ProviderGroup[]>([])
+  const [sparkline, setSparkline] = useState<number[]>([])
+  const lastBpsRef = useRef<number>(0)
 
   useEffect(() => {
     if (stats.autoMode) setMode(stats.autoMode)
   }, [stats.autoMode])
 
+  // Fetch provider groups (not just count)
   useEffect(() => {
     const fetchProviders = async () => {
       try {
         const servers = await api.getServerHealth()
         const groups = groupDownloadServers(servers)
-        setProviderCount(groups.length)
+        setProviderGroups(groups)
       } catch { /* ignore */ }
     }
     fetchProviders()
     const interval = setInterval(fetchProviders, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  // Build sparkline history from WS ticks
+  useEffect(() => {
+    if (!stats.running) {
+      if (sparkline.length > 0) setSparkline([])
+      return
+    }
+    // Only push if the value actually changed (avoid duplicate pushes from re-renders)
+    const bps = stats.downloadBps
+    if (bps !== lastBpsRef.current) {
+      lastBpsRef.current = bps
+      setSparkline(prev => {
+        const next = [...prev, bps]
+        return next.length > MAX_SPARKLINE ? next.slice(-MAX_SPARKLINE) : next
+      })
+    }
+  }, [stats.downloadBps, stats.running])
 
   const handleModeChange = async (newMode: string) => {
     setMode(newMode)
@@ -131,14 +153,10 @@ export default function ControlSurface({ stats }: ControlSurfaceProps) {
             disabled={toggling}
             className="group relative w-full py-4 rounded-xl font-bold text-base transition-all duration-300 disabled:opacity-50 overflow-hidden"
           >
-            {/* Button gradient background */}
             <div className="absolute inset-0 bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 transition-opacity duration-300" />
             <div className="absolute inset-0 bg-gradient-to-r from-amber-500 via-orange-400 to-red-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            {/* Shimmer overlay */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
-            {/* Glow */}
             <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-red-500 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
-            {/* Content */}
             <div className="relative flex items-center justify-center gap-2 text-white">
               <Flame size={20} strokeWidth={2.5} className="group-hover:animate-float" />
               <span className="tracking-wide">Launch Engine</span>
@@ -194,13 +212,13 @@ export default function ControlSurface({ stats }: ControlSurfaceProps) {
       {/* Three-column command grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:divide-x divide-white/[0.06]">
         <div className="p-5">
-          <ThroughputColumn stats={stats} mode={mode} />
+          <ThroughputColumn stats={stats} mode={mode} sparkline={sparkline} />
         </div>
         <div className="p-5 border-t md:border-t-0 border-white/[0.06]">
-          <ServerPoolColumn stats={stats} providerCount={providerCount} />
+          <ServerPoolColumn stats={stats} providerGroups={providerGroups} />
         </div>
         <div className="p-5 border-t md:border-t-0 border-white/[0.06]">
-          <EngineLog events={stats.events || []} />
+          <SessionMetrics stats={stats} events={stats.events || []} />
         </div>
       </div>
     </div>
