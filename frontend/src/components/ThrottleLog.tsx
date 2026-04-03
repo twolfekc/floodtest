@@ -53,7 +53,7 @@ export default function ThrottleLog() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-40">
-        <p className="text-gray-400">Loading throttle events...</p>
+        <p className="text-zinc-400">Loading throttle events...</p>
       </div>
     )
   }
@@ -68,24 +68,24 @@ export default function ThrottleLog() {
 
   if (events.length === 0) {
     return (
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-8 text-center">
-        <p className="text-gray-400">No throttle events detected</p>
+      <div className="bg-forge-surface rounded-xl border border-forge-border p-8 text-center">
+        <p className="text-zinc-400">No throttle events detected</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+    <div className="bg-forge-surface rounded-xl border border-forge-border overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-800 text-left">
-              <th className="px-4 py-3 text-gray-400 font-medium">Time</th>
-              <th className="px-4 py-3 text-gray-400 font-medium">Direction</th>
-              <th className="px-4 py-3 text-gray-400 font-medium">Target Speed</th>
-              <th className="px-4 py-3 text-gray-400 font-medium">Actual Speed</th>
-              <th className="px-4 py-3 text-gray-400 font-medium">Duration</th>
-              <th className="px-4 py-3 text-gray-400 font-medium">Status</th>
+            <tr className="border-b border-forge-border text-left">
+              <th className="px-4 py-3 text-zinc-500 text-xs uppercase tracking-wide font-medium">Time</th>
+              <th className="px-4 py-3 text-zinc-500 text-xs uppercase tracking-wide font-medium">Direction</th>
+              <th className="px-4 py-3 text-zinc-500 text-xs uppercase tracking-wide font-medium">Target Speed</th>
+              <th className="px-4 py-3 text-zinc-500 text-xs uppercase tracking-wide font-medium">Actual Speed</th>
+              <th className="px-4 py-3 text-zinc-500 text-xs uppercase tracking-wide font-medium">Duration</th>
+              <th className="px-4 py-3 text-zinc-500 text-xs uppercase tracking-wide font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -94,27 +94,27 @@ export default function ThrottleLog() {
               return (
                 <tr
                   key={event.id}
-                  className={`border-b border-gray-800 last:border-b-0 ${
+                  className={`border-b border-forge-border last:border-b-0 ${
                     isActive
-                      ? 'border-l-2 border-l-red-500 bg-red-950/30'
+                      ? 'border-l-2 border-l-red-600 bg-red-950/20'
                       : i % 2 === 0
-                      ? 'bg-gray-900'
-                      : 'bg-gray-900/60'
+                      ? 'bg-forge-surface'
+                      : 'bg-forge-base'
                   }`}
                 >
-                  <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
+                  <td className="px-4 py-3 font-mono text-zinc-500 text-xs whitespace-nowrap">
                     {formatTimestamp(event.timestamp)}
                   </td>
-                  <td className="px-4 py-3 text-gray-300 capitalize">
+                  <td className="px-4 py-3 text-zinc-300 capitalize">
                     {event.direction}
                   </td>
-                  <td className="px-4 py-3 text-gray-300">
+                  <td className="px-4 py-3 font-mono text-zinc-300">
                     {formatSpeed(event.targetBps)}
                   </td>
-                  <td className="px-4 py-3 text-gray-300">
+                  <td className="px-4 py-3 font-mono text-zinc-300">
                     {formatSpeed(event.actualBps)}
                   </td>
-                  <td className="px-4 py-3 text-gray-300">
+                  <td className="px-4 py-3 font-mono text-zinc-300">
                     {isActive ? (
                       <span className="text-red-400">Ongoing</span>
                     ) : (
@@ -123,12 +123,12 @@ export default function ThrottleLog() {
                   </td>
                   <td className="px-4 py-3">
                     {isActive ? (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400">
+                      <span className="bg-red-600/20 text-red-400 text-xs rounded-full px-2 py-0.5 inline-flex items-center gap-1.5 font-medium">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
                         Active
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-700/50 text-gray-400">
+                      <span className="bg-zinc-800 text-zinc-400 text-xs rounded-full px-2 py-0.5 inline-flex items-center font-medium">
                         Resolved
                       </span>
                     )}
