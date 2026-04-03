@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { ChevronDown, ChevronRight, Unlock } from 'lucide-react'
 import { ServerHealth, UploadServerHealth } from '../api/client'
 import { extractProvider } from '../utils/providerGrouping'
 
@@ -229,17 +230,17 @@ export default function ProviderAccordion({ downloadServers, uploadServers, onUn
   return (
     <div>
       {/* Expand All / Collapse All */}
-      <div className="flex justify-end px-4 py-2 border-b border-forge-border">
+      <div className="flex justify-end px-4 py-2 border-b border-white/[0.04]">
         <button
           onClick={toggleAll}
-          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider hover:text-zinc-400 transition-colors"
         >
           {effectiveAllExpanded ? 'Collapse All' : 'Expand All'}
         </button>
       </div>
 
       {/* Provider sections */}
-      <div className="divide-y divide-forge-border">
+      <div className="divide-y divide-white/[0.04]">
         {sections.map(section => {
           const isExpanded = expandedProviders.has(section.name)
 
@@ -248,22 +249,21 @@ export default function ProviderAccordion({ downloadServers, uploadServers, onUn
               {/* Provider header */}
               <button
                 onClick={() => toggleProvider(section.name)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-forge-raised/40 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
               >
-                <span className="text-zinc-500 text-xs w-3">
-                  {isExpanded ? '\u25BE' : '\u25B8'}
-                </span>
-                <span className="text-sm font-medium text-zinc-50">{section.name}</span>
+                {isExpanded
+                  ? <ChevronDown size={14} className="text-zinc-500 flex-shrink-0" />
+                  : <ChevronRight size={14} className="text-zinc-600 flex-shrink-0" />
+                }
                 <span className={`w-2.5 h-2.5 rounded-full ${section.color} flex-shrink-0`} />
-                <span className="text-xs text-zinc-500 flex items-center gap-1.5">
-                  <span>{section.servers.length} server{section.servers.length !== 1 ? 's' : ''}</span>
-                  <span className="text-zinc-600">&middot;</span>
-                  <span className="text-zinc-400 font-mono">{formatSpeed(section.totalSpeed)}</span>
-                  <span className="text-zinc-600">&middot;</span>
-                  <span className={section.healthyCount === section.servers.length ? 'text-emerald-500' : 'text-amber-500'}>
+                <span className="text-sm font-semibold text-zinc-100">{section.name}</span>
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="text-xs text-zinc-500">{section.servers.length} server{section.servers.length !== 1 ? 's' : ''}</span>
+                  <span className="text-xs font-mono text-zinc-400">{formatSpeed(section.totalSpeed)}</span>
+                  <span className={`text-xs font-bold font-mono ${section.healthyCount === section.servers.length ? 'text-emerald-500' : 'text-amber-500'}`}>
                     {section.healthyCount}/{section.servers.length}
                   </span>
-                </span>
+                </div>
               </button>
 
               {/* Expanded server table */}
@@ -271,50 +271,52 @@ export default function ProviderAccordion({ downloadServers, uploadServers, onUn
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm text-left">
                     <thead>
-                      <tr className="border-b border-forge-border text-zinc-500 text-xs uppercase tracking-wide">
-                        <th className="px-4 py-1.5 pl-10 font-medium">Server</th>
-                        <th className="px-4 py-1.5 font-medium">Location</th>
-                        <th className="px-4 py-1.5 font-medium">Speed</th>
-                        <th className="px-4 py-1.5 font-medium">Streams</th>
-                        <th className="px-4 py-1.5 font-medium">Transferred</th>
-                        <th className="px-4 py-1.5 font-medium">Status</th>
+                      <tr className="border-b border-white/[0.06]">
+                        <th className="px-4 py-2 pl-10 text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">Server</th>
+                        <th className="px-4 py-2 text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">Location</th>
+                        <th className="px-4 py-2 text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">Speed</th>
+                        <th className="px-4 py-2 text-[10px] font-semibold text-zinc-600 uppercase tracking-wider text-center">Streams</th>
+                        <th className="px-4 py-2 text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">Transferred</th>
+                        <th className="px-4 py-2 text-[10px] font-semibold text-zinc-600 uppercase tracking-wider">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-forge-border/50">
+                    <tbody className="divide-y divide-white/[0.03]">
                       {section.servers
                         .slice()
                         .sort((a, b) => b.speedBps - a.speedBps)
                         .map((server, idx) => {
                           const cooldown = server.unhealthyUntil ? timeUntil(server.unhealthyUntil) : ''
                           return (
-                            <tr key={server.url} className={`${rowBg(idx)} ${server.status === 'blocked' ? 'opacity-60' : ''}`}>
-                              <td className="px-4 py-1.5 pl-10 text-zinc-50 font-medium whitespace-nowrap">
+                            <tr key={server.url} className={`${rowBg(idx)} hover:bg-white/[0.02] transition-colors ${server.status === 'blocked' ? 'opacity-50' : ''}`}>
+                              <td className="px-4 py-2 pl-10 text-zinc-200 font-medium whitespace-nowrap text-xs">
                                 {formatUrl(server.url)}
                               </td>
-                              <td className="px-4 py-1.5 text-zinc-400 whitespace-nowrap">
+                              <td className="px-4 py-2 text-zinc-500 whitespace-nowrap text-xs">
                                 {server.location || '\u2014'}
                               </td>
-                              <td className="px-4 py-1.5 text-zinc-300 font-mono whitespace-nowrap">
+                              <td className="px-4 py-2 text-zinc-300 font-mono whitespace-nowrap text-xs">
                                 {formatSpeed(server.speedBps)}
                               </td>
-                              <td className="px-4 py-1.5 text-zinc-400 text-center">
+                              <td className="px-4 py-2 text-zinc-400 text-center font-mono text-xs">
                                 {server.activeStreams}
                               </td>
-                              <td className="px-4 py-1.5 text-zinc-400 font-mono whitespace-nowrap">
+                              <td className="px-4 py-2 text-zinc-500 font-mono whitespace-nowrap text-xs">
                                 {formatBytes(server.bytesTransferred)}
                               </td>
-                              <td className="px-4 py-1.5 whitespace-nowrap">
+                              <td className="px-4 py-2 whitespace-nowrap">
                                 <div className="flex items-center gap-2">
-                                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${statusColor(server.status)}`}>
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColor(server.status)}`}>
+                                    {server.status === 'healthy' && <span className="w-1 h-1 rounded-full bg-emerald-400" />}
                                     {server.status === 'cooldown' && cooldown
-                                      ? `Cooldown (${cooldown})`
-                                      : server.status.charAt(0).toUpperCase() + server.status.slice(1)}
+                                      ? `${cooldown}`
+                                      : server.status}
                                   </span>
                                   {server.status === 'blocked' && onUnblock && (
                                     <button
                                       onClick={() => onUnblock(server.url)}
-                                      className="px-2 py-0.5 rounded text-xs font-medium bg-red-600/20 text-red-400 border border-red-800 hover:bg-red-600/30"
+                                      className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
                                     >
+                                      <Unlock size={10} />
                                       Unblock
                                     </button>
                                   )}

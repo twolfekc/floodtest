@@ -13,6 +13,9 @@ import {
   ResponsiveContainer,
   ReferenceArea,
 } from 'recharts'
+import {
+  BarChart3, ArrowDown, ArrowUp, Database, TrendingUp, Activity, AlertTriangle,
+} from 'lucide-react'
 import { api, HistoryPoint, ThrottleEvent, DailyUsageEntry, SpeedTestHistoryEntry } from '../api/client'
 import ThrottleLog from './ThrottleLog'
 
@@ -142,17 +145,22 @@ export default function Charts() {
   const avgUpload = history.reduce((s, p) => s + p.uploadBps, 0) / (history.length || 1)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <div className="flex gap-2">
+    <div className="space-y-6 max-w-[1400px]">
+      {/* Page Header */}
+      <div className="flex items-center justify-between animate-fade-in">
+        <div>
+          <h1 className="text-xl font-bold text-zinc-100 tracking-tight">Charts</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">Historical throughput analysis</p>
+        </div>
+        <div className="inline-flex rounded-xl bg-forge-inset border border-white/[0.06] p-1">
           {RANGES.map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 range === r
-                  ? 'bg-amber-500 text-zinc-950'
-                  : 'bg-forge-raised text-zinc-500 hover:text-zinc-300 hover:bg-forge-border-strong'
+                  ? 'bg-amber-500 text-zinc-950 shadow-sm shadow-amber-500/25'
+                  : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
               {r}
@@ -161,22 +169,54 @@ export default function Charts() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-2">
-        <div className="bg-forge-surface rounded-lg border border-forge-border p-3">
-          <span className="text-xs text-zinc-500 uppercase tracking-wide">Avg ↓ Speed</span>
-          <p className="text-lg font-mono font-bold text-orange-400">{formatChartSpeed(avgDownload)}</p>
+      {/* Summary Stats */}
+      <div className="grid grid-cols-3 gap-3 animate-fade-in-up">
+        <div className="group bg-forge-surface rounded-xl border border-orange-500/20 p-4 card-hover relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/[0.07] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+              <ArrowDown className="w-4 h-4 text-orange-400" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Avg Download</span>
+              <p className="text-lg font-mono font-bold text-orange-400 truncate">{formatChartSpeed(avgDownload)}</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-forge-surface rounded-lg border border-forge-border p-3">
-          <span className="text-xs text-zinc-500 uppercase tracking-wide">Avg ↑ Speed</span>
-          <p className="text-lg font-mono font-bold text-slate-400">{formatChartSpeed(avgUpload)}</p>
+        <div className="group bg-forge-surface rounded-xl border border-slate-500/20 p-4 card-hover relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-500/[0.07] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-slate-500/10 flex items-center justify-center shrink-0">
+              <ArrowUp className="w-4 h-4 text-slate-400" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Avg Upload</span>
+              <p className="text-lg font-mono font-bold text-slate-400 truncate">{formatChartSpeed(avgUpload)}</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-forge-surface rounded-lg border border-forge-border p-3">
-          <span className="text-xs text-zinc-500 uppercase tracking-wide">Data Points</span>
-          <p className="text-lg font-mono font-bold text-zinc-300">{history.length.toLocaleString()}</p>
+        <div className="group bg-forge-surface rounded-xl border border-zinc-500/20 p-4 card-hover relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/[0.07] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-zinc-500/10 flex items-center justify-center shrink-0">
+              <Database className="w-4 h-4 text-zinc-400" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Data Points</span>
+              <p className="text-lg font-mono font-bold text-zinc-300 truncate">{history.length.toLocaleString()}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="bg-forge-surface rounded-xl border border-forge-border p-4">
+      {/* Main Throughput Chart */}
+      <div className="animate-fade-in-up bg-forge-surface rounded-xl border border-forge-border p-4 card-hover">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <BarChart3 className="w-4 h-4 text-amber-400" />
+          </div>
+          <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Throughput History</h2>
+        </div>
         {loading ? (
           <div className="flex items-center justify-center h-80">
             <p className="text-zinc-400">Loading chart data...</p>
@@ -260,28 +300,35 @@ export default function Charts() {
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </div>
 
-      <div className="flex items-center gap-6 text-sm text-zinc-400">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-amber-500" />
-          Download
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-slate-400" />
-          Upload
-        </div>
-        {filteredEvents.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500 opacity-50" />
-            Throttle Event
+        {/* Legend */}
+        <div className="flex items-center gap-5 mt-3 pt-3 border-t border-forge-border">
+          <div className="flex items-center gap-2 text-sm text-zinc-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            Download
           </div>
-        )}
+          <div className="flex items-center gap-2 text-sm text-zinc-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+            Upload
+          </div>
+          {filteredEvents.length > 0 && (
+            <div className="flex items-center gap-2 text-sm text-zinc-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 opacity-50" />
+              Throttle Event
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* Daily Usage */}
       {dailyUsage.length > 0 && (
-        <div className="bg-forge-surface rounded-lg border border-forge-border p-3 mt-2">
-          <span className="text-xs text-zinc-500 uppercase tracking-wide mb-2 block">Daily Usage</span>
+        <div className="animate-fade-in-up bg-forge-surface rounded-xl border border-forge-border p-4 card-hover">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+            </div>
+            <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Daily Usage</h2>
+          </div>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={dailyUsage}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
@@ -306,9 +353,15 @@ export default function Charts() {
         </div>
       )}
 
+      {/* ISP Speed Tests */}
       {speedtestHistory.length > 0 && (
-        <div className="bg-forge-surface rounded-lg border border-forge-border p-3 mt-2">
-          <span className="text-xs text-zinc-500 uppercase tracking-wide mb-2 block">ISP Speed Tests</span>
+        <div className="animate-fade-in-up bg-forge-surface rounded-xl border border-forge-border p-4 card-hover">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
+              <Activity className="w-4 h-4 text-violet-400" />
+            </div>
+            <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">ISP Speed Tests</h2>
+          </div>
           <ResponsiveContainer width="100%" height={160}>
             <ScatterChart>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />

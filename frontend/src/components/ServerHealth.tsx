@@ -1,4 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import {
+  ArrowDownCircle, ArrowUpCircle, Globe, AlertCircle, Zap,
+  ChevronDown, ChevronRight,
+} from 'lucide-react'
 import { api, ServerHealth as ServerHealthData, UploadServerHealth as UploadServerHealthData, SpeedTestResult } from '../api/client'
 import { groupDownloadServers } from '../utils/providerGrouping'
 import ProviderAccordion from './ProviderAccordion'
@@ -112,33 +116,44 @@ function computeCounts(servers: NormalizedServer[]): StatusCounts {
 
 function InlineStatusCounts({ counts }: { counts: StatusCounts }) {
   return (
-    <span className="flex items-center gap-2 text-xs">
-      <span className="text-zinc-400">
-        <span className="text-zinc-50 font-medium">{counts.total}</span> Total
+    <span className="flex items-center gap-1.5 flex-wrap">
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-800/60 text-xs">
+        <span className="text-zinc-100 font-medium font-mono">{counts.total}</span>
+        <span className="text-zinc-500">Total</span>
       </span>
       {counts.healthy > 0 && (
-        <span className="text-emerald-400">
-          <span className="font-medium">{counts.healthy}</span> Healthy
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="text-emerald-400 font-medium font-mono">{counts.healthy}</span>
+          <span className="text-emerald-400/70">Healthy</span>
         </span>
       )}
       {counts.cooldown > 0 && (
-        <span className="text-amber-400">
-          <span className="font-medium">{counts.cooldown}</span> Cooldown
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span className="text-amber-400 font-medium font-mono">{counts.cooldown}</span>
+          <span className="text-amber-400/70">Cooldown</span>
         </span>
       )}
       {counts.failed > 0 && (
-        <span className="text-red-400">
-          <span className="font-medium">{counts.failed}</span> Failed
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+          <span className="text-red-400 font-medium font-mono">{counts.failed}</span>
+          <span className="text-red-400/70">Failed</span>
         </span>
       )}
       {counts.blocked > 0 && (
-        <span className="text-red-400">
-          <span className="font-medium">{counts.blocked}</span> Blocked
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-red-400 font-medium font-mono">{counts.blocked}</span>
+          <span className="text-red-400/70">Blocked</span>
         </span>
       )}
       {counts.testing > 0 && (
-        <span className="text-amber-400">
-          <span className="font-medium">{counts.testing}</span> Testing
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+          <span className="text-amber-400 font-medium font-mono">{counts.testing}</span>
+          <span className="text-amber-400/70">Testing</span>
         </span>
       )}
     </span>
@@ -250,8 +265,17 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
 
   if (loading) {
     return (
-      <div className="bg-forge-surface rounded-lg border border-forge-border p-4">
-        <div className="text-sm text-zinc-500">Loading server health...</div>
+      <div className="space-y-5 max-w-[1400px] animate-fade-in">
+        <div>
+          <h1 className="text-xl font-bold text-zinc-100 tracking-tight">Servers</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">Download & upload server health monitoring</p>
+        </div>
+        <div className="bg-forge-surface rounded-xl border border-forge-border p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+            <span className="text-sm text-zinc-500">Loading server health...</span>
+          </div>
+        </div>
       </div>
     )
   }
@@ -261,37 +285,67 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-5 max-w-[1400px]">
+      {/* Page header */}
+      <div className="animate-fade-in">
+        <h1 className="text-xl font-bold text-zinc-100 tracking-tight">Servers</h1>
+        <p className="text-sm text-zinc-500 mt-0.5">Download & upload server health monitoring</p>
+      </div>
+
       {/* Provider Breakdown summary */}
       {providerGroups.length > 0 && (
-        <div className="bg-forge-surface rounded-lg border border-forge-border p-3 mb-2">
-          <span className="text-xs text-zinc-500 uppercase tracking-wide mb-2 block">Provider Breakdown</span>
-          {providerGroups.sort((a, b) => b.totalSpeedBps - a.totalSpeedBps).map(g => (
-            <div key={g.name} className="flex items-center gap-2 mb-1">
-              <span className="text-xs text-zinc-300 w-24 truncate">{g.name}</span>
-              <div className="flex-1 h-2 bg-forge-raised rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(g.totalSpeedBps / maxProviderSpeed) * 100}%` }} />
-              </div>
-              <span className="text-xs font-mono text-zinc-400 w-20 text-right">
-                {g.totalSpeedBps > 1e9 ? (g.totalSpeedBps / 1e9).toFixed(1) + ' Gbps' : (g.totalSpeedBps / 1e6).toFixed(0) + ' Mbps'}
-              </span>
+        <div className="animate-fade-in-up bg-forge-surface rounded-xl border border-forge-border p-4 card-hover">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <Globe size={14} className="text-purple-400" />
             </div>
-          ))}
+            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Provider Breakdown</h3>
+          </div>
+          <div className="space-y-2.5">
+            {providerGroups.sort((a, b) => b.totalSpeedBps - a.totalSpeedBps).map((g, i) => (
+              <div key={g.name} className="group/row">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-zinc-600 w-4 text-right">{i + 1}</span>
+                    <span className="text-sm font-medium text-zinc-300">{g.name}</span>
+                  </div>
+                  <span className="text-xs font-mono text-zinc-400">
+                    {g.totalSpeedBps > 1e9 ? (g.totalSpeedBps / 1e9).toFixed(1) + ' Gbps' : (g.totalSpeedBps / 1e6).toFixed(0) + ' Mbps'}
+                  </span>
+                </div>
+                <div className="ml-6 h-2 bg-forge-raised rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.max(4, (g.totalSpeedBps / maxProviderSpeed) * 100)}%`,
+                      backgroundColor: g.color,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Download Servers Section */}
-      <div className="bg-forge-surface rounded-lg border border-forge-border overflow-hidden">
+      <div className="animate-fade-in-up bg-forge-surface rounded-xl border border-forge-border overflow-hidden">
         {/* Collapsible header */}
         <div
-          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 cursor-pointer select-none hover:bg-forge-raised/50 transition-colors border-b border-orange-900/30"
+          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 cursor-pointer select-none hover:bg-forge-raised/50 transition-colors border-b border-orange-500/20"
           onClick={toggleDownload}
         >
           <div className="flex items-center gap-3">
-            <span className="text-orange-400 text-sm">
-              {downloadCollapsed ? '\u25B8' : '\u25BE'}
-            </span>
-            <span className="text-sm font-semibold text-orange-400">Download Servers</span>
+            <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center">
+              <ArrowDownCircle size={14} className="text-orange-400" />
+            </div>
+            <div className="flex items-center gap-2">
+              {downloadCollapsed
+                ? <ChevronRight size={14} className="text-orange-400" />
+                : <ChevronDown size={14} className="text-orange-400" />
+              }
+              <span className="text-sm font-semibold text-orange-400">Download Servers</span>
+            </div>
             <InlineStatusCounts counts={downloadCounts} />
           </div>
 
@@ -304,17 +358,28 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
             {downloadCounts.blocked > 0 && (
               <button
                 onClick={handleUnblockAllDownloads}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-800"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-400 border border-red-500/30 bg-red-500/5 hover:bg-red-500/15 transition-colors"
               >
+                <AlertCircle size={13} />
                 Unblock All ({downloadCounts.blocked})
               </button>
             )}
             <button
               onClick={handleSpeedTest}
               disabled={isRunning}
-              className="px-4 py-1.5 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-600 text-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 rounded-lg text-sm font-medium bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-amber-500/20"
             >
-              {isRunning ? 'Testing...' : 'Run Speed Test'}
+              {isRunning ? (
+                <span className="flex items-center gap-2">
+                  <Zap size={13} className="animate-pulse" />
+                  Testing...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Zap size={13} />
+                  Run Speed Test
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -324,13 +389,13 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
           <div className="px-4 py-3 border-b border-forge-border">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-zinc-400">
-                Testing servers... {completed}/{total} complete
+                Testing servers... <span className="font-mono text-zinc-300">{completed}/{total}</span> complete
               </span>
-              <span className="text-sm text-zinc-500">{pct}%</span>
+              <span className="text-sm font-mono text-amber-400">{pct}%</span>
             </div>
-            <div className="bg-forge-raised rounded-full h-2">
+            <div className="relative h-2 bg-forge-raised rounded-full overflow-hidden">
               <div
-                className="bg-amber-500 h-2 rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 ease-out progress-shimmer"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -347,17 +412,23 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
       </div>
 
       {/* Upload Servers Section */}
-      <div className="bg-forge-surface rounded-lg border border-forge-border overflow-hidden">
+      <div className="animate-fade-in-up bg-forge-surface rounded-xl border border-forge-border overflow-hidden">
         {/* Collapsible header */}
         <div
-          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 cursor-pointer select-none hover:bg-forge-raised/50 transition-colors border-b border-slate-700/30"
+          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 cursor-pointer select-none hover:bg-forge-raised/50 transition-colors border-b border-slate-500/20"
           onClick={toggleUpload}
         >
           <div className="flex items-center gap-3">
-            <span className="text-slate-400 text-sm">
-              {uploadCollapsed ? '\u25B8' : '\u25BE'}
-            </span>
-            <span className="text-sm font-semibold text-slate-400">Upload Servers</span>
+            <div className="w-7 h-7 rounded-lg bg-slate-500/10 flex items-center justify-center">
+              <ArrowUpCircle size={14} className="text-slate-400" />
+            </div>
+            <div className="flex items-center gap-2">
+              {uploadCollapsed
+                ? <ChevronRight size={14} className="text-slate-400" />
+                : <ChevronDown size={14} className="text-slate-400" />
+              }
+              <span className="text-sm font-semibold text-slate-400">Upload Servers</span>
+            </div>
             <InlineStatusCounts counts={uploadCounts} />
           </div>
 
@@ -365,8 +436,9 @@ export default function ServerHealth({ speedTestRunning, speedTestCompleted, spe
             {uploadCounts.blocked > 0 && (
               <button
                 onClick={handleUnblockAllUploads}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-800"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-400 border border-red-500/30 bg-red-500/5 hover:bg-red-500/15 transition-colors"
               >
+                <AlertCircle size={13} />
                 Unblock All ({uploadCounts.blocked})
               </button>
             )}

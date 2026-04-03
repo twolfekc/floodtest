@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Zap } from 'lucide-react'
+import { Zap, Power, Flame } from 'lucide-react'
 import { WsStats } from '../hooks/useWebSocket'
 import { api } from '../api/client'
 import { groupDownloadServers } from '../utils/providerGrouping'
@@ -70,65 +70,100 @@ export default function ControlSurface({ stats }: ControlSurfaceProps) {
   // --- IDLE STATE ---
   if (!stats.running) {
     return (
-      <div className="bg-forge-surface rounded-lg border border-forge-border p-4 shadow-lg shadow-amber-500/5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Zap size={16} className="text-amber-500" />
-            <span className="text-sm font-semibold text-zinc-50">READY</span>
+      <div className="gradient-border glow-amber">
+        <div className="gradient-border-inner p-5">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                  <Zap size={20} className="text-amber-400" />
+                </div>
+                <div className="absolute inset-0 rounded-xl bg-amber-500/20 blur-lg animate-breathe" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-bold text-zinc-100">Ready to Launch</span>
+                  <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    Standby
+                  </span>
+                </div>
+                <span className="text-xs text-zinc-500 font-mono">
+                  {stats.healthyServers}/{stats.totalServers} servers online
+                </span>
+              </div>
+            </div>
+            <ModeToggle mode={mode} onChange={handleModeChange} />
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-zinc-500 font-mono">
-              {stats.healthyServers}/{stats.totalServers} healthy
-            </span>
-            <ModeToggle mode={mode} onChange={handleModeChange} compact />
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-x-6 gap-y-1 mb-3 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-zinc-500 text-xs">ISP</span>
-            <span className="font-mono text-zinc-200 text-sm">
-              &darr;{formatSpeed(stats.measuredDownloadMbps * 1e6)} / &uarr;{formatSpeed(stats.measuredUploadMbps * 1e6)}
-            </span>
-          </div>
-          {stats.nextScheduledTime && (
+          {/* ISP speed + schedule */}
+          <div className="flex items-center gap-6 mb-4 px-1">
             <div className="flex items-center gap-2">
-              <span className="text-zinc-500 text-xs">Next</span>
-              <span className="text-zinc-400 text-xs">{stats.nextScheduledEvent}</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">ISP Speed</span>
+              <span className="font-mono text-sm text-zinc-300">
+                ↓{formatSpeed(stats.measuredDownloadMbps * 1e6)} / ↑{formatSpeed(stats.measuredUploadMbps * 1e6)}
+              </span>
+            </div>
+            {stats.nextScheduledTime && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Next</span>
+                <span className="text-xs text-zinc-400">{stats.nextScheduledEvent}</span>
+              </div>
+            )}
+          </div>
+
+          {/* ISP test progress bar if running */}
+          {stats.ispTestRunning && (
+            <div className="mb-4">
+              <div className="relative h-1.5 bg-forge-raised rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300 progress-shimmer"
+                  style={{ width: `${stats.ispTestProgress}%` }}
+                />
+              </div>
+              <span className="text-xs text-zinc-500 mt-1.5 block">{stats.ispTestPhase}... {stats.ispTestProgress}%</span>
             </div>
           )}
-        </div>
 
-        {/* ISP test progress bar if running */}
-        {stats.ispTestRunning && (
-          <div className="mb-3">
-            <div className="h-1 bg-forge-raised rounded-full overflow-hidden">
-              <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${stats.ispTestProgress}%` }} />
+          {/* Launch button */}
+          <button
+            onClick={handleToggle}
+            disabled={toggling}
+            className="group relative w-full py-4 rounded-xl font-bold text-base transition-all duration-300 disabled:opacity-50 overflow-hidden"
+          >
+            {/* Button gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500 via-orange-400 to-red-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            {/* Shimmer overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+            {/* Glow */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-red-500 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
+            {/* Content */}
+            <div className="relative flex items-center justify-center gap-2 text-white">
+              <Flame size={20} strokeWidth={2.5} className="group-hover:animate-float" />
+              <span className="tracking-wide">Launch Engine</span>
             </div>
-            <span className="text-xs text-zinc-500 mt-1 block">{stats.ispTestPhase}... {stats.ispTestProgress}%</span>
-          </div>
-        )}
-
-        <button
-          onClick={handleToggle}
-          disabled={toggling}
-          className="w-full py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-base transition-colors disabled:opacity-50"
-        >
-          Launch
-        </button>
+          </button>
+        </div>
       </div>
     )
   }
 
   // --- RUNNING STATE ---
   return (
-    <div className="bg-forge-surface rounded-lg border border-forge-border transition-all duration-300">
+    <div className="relative bg-forge-surface rounded-xl border border-emerald-500/20 overflow-hidden transition-all duration-300 glow-amber">
+      {/* Subtle animated top border */}
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500 via-amber-500 to-emerald-500 animate-border-flow" style={{ backgroundSize: '200% 100%' }} />
+
       {/* Header bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-forge-border">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-sm font-semibold text-zinc-50 capitalize">{mode}</span>
-          <span className="text-sm text-zinc-500">&middot;</span>
+          <div className="relative">
+            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+            <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-40" />
+          </div>
+          <span className="text-sm font-bold text-zinc-100 capitalize">{mode}</span>
+          <span className="text-zinc-600">·</span>
           <span className="text-sm text-zinc-400 tabular-nums font-mono">{formatDuration(stats.uptimeSeconds)}</span>
         </div>
         <div className="flex items-center gap-3">
@@ -136,19 +171,20 @@ export default function ControlSurface({ stats }: ControlSurfaceProps) {
           <button
             onClick={handleToggle}
             disabled={toggling}
-            className="px-4 py-1.5 rounded-lg text-sm font-medium bg-red-600/20 text-red-400 border border-red-800 hover:bg-red-600/30 transition-colors disabled:opacity-50"
+            className="group flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all duration-200 disabled:opacity-50"
           >
-            {toggling ? '...' : 'Stop'}
+            <Power size={14} />
+            <span>{toggling ? '...' : 'Stop'}</span>
           </button>
         </div>
       </div>
 
       {stats.ispTestRunning && (
-        <div className="px-5 py-2 border-b border-forge-border space-y-1">
-          <p className="text-xs text-amber-400">{stats.ispTestPhase || 'Running speed test...'}</p>
-          <div className="h-1 bg-forge-raised rounded-full overflow-hidden">
+        <div className="px-5 py-2.5 border-b border-white/[0.06] space-y-1.5">
+          <p className="text-xs font-medium text-amber-400">{stats.ispTestPhase || 'Running speed test...'}</p>
+          <div className="relative h-1.5 bg-forge-raised rounded-full overflow-hidden">
             <div
-              className="h-full bg-amber-500 rounded-full transition-all duration-300"
+              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300 progress-shimmer"
               style={{ width: `${stats.ispTestProgress}%` }}
             />
           </div>
@@ -156,14 +192,14 @@ export default function ControlSurface({ stats }: ControlSurfaceProps) {
       )}
 
       {/* Three-column command grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:divide-x divide-forge-border">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:divide-x divide-white/[0.06]">
         <div className="p-5">
           <ThroughputColumn stats={stats} mode={mode} />
         </div>
-        <div className="p-5 border-t md:border-t-0 border-forge-border">
+        <div className="p-5 border-t md:border-t-0 border-white/[0.06]">
           <ServerPoolColumn stats={stats} providerCount={providerCount} />
         </div>
-        <div className="p-5 border-t md:border-t-0 border-forge-border">
+        <div className="p-5 border-t md:border-t-0 border-white/[0.06]">
           <EngineLog events={stats.events || []} />
         </div>
       </div>
