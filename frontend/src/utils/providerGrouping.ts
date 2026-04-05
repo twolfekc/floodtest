@@ -29,9 +29,10 @@ export const PROVIDER_PATTERNS: [RegExp, string][] = [
 ]
 
 export const PROVIDER_COLORS = [
-  '#f59e0b', '#ea580c', '#f97316', '#d97706', '#c2410c',
-  '#fbbf24', '#fb923c', '#facc15', '#ef4444', '#dc2626',
-  '#a16207', '#92400e', '#b45309', '#78350f', '#ca8a04', '#eab308',
+  '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6',
+  '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#f59e0b',
+  '#84cc16', '#22c55e', '#14b8a6', '#0891b2', '#f97316',
+  '#64748b',
 ]
 
 export function extractProvider(url: string): string {

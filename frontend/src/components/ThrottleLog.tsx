@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { AlertTriangle, CheckCircle, ArrowDown, ArrowUp, Loader2 } from 'lucide-react'
 import { api, ThrottleEvent } from '../api/client'
 
@@ -64,31 +65,31 @@ export default function ThrottleLog() {
 
   if (loading) {
     return (
-      <div className="bg-forge-surface rounded-xl border border-forge-border p-8 animate-fade-in">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="glass-card p-8">
         <div className="flex flex-col items-center justify-center h-40 gap-3">
           <Loader2 size={24} className="text-zinc-600 animate-spin" />
           <p className="text-sm text-zinc-500">Loading throttle events...</p>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   if (error) {
     return (
-      <div className="bg-forge-surface rounded-xl border border-red-500/30 p-8 animate-fade-in">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="glass-card border-red-500/30 p-8">
         <div className="flex flex-col items-center justify-center h-40 gap-3">
           <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
             <AlertTriangle size={20} className="text-red-400" />
           </div>
           <p className="text-sm text-red-400">{error}</p>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   if (events.length === 0) {
     return (
-      <div className="bg-forge-surface rounded-xl border border-forge-border animate-fade-in">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="glass-card">
         {/* Header */}
         <div className="flex items-center justify-between p-4 pb-0">
           <div className="flex items-center gap-2">
@@ -108,13 +109,13 @@ export default function ThrottleLog() {
           </div>
           <p className="text-sm text-zinc-500">No throttling detected</p>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   return (
-    <div className={`bg-forge-surface rounded-xl border overflow-hidden animate-fade-in ${
-      activeCount > 0 ? 'border-red-500/30' : 'border-forge-border'
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className={`glass-card overflow-hidden ${
+      activeCount > 0 ? 'border-red-500/30' : ''
     }`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 pb-3">
@@ -177,12 +178,12 @@ export default function ThrottleLog() {
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-1.5">
                       {event.direction === 'download' ? (
-                        <ArrowDown size={13} className="text-orange-400" />
+                        <ArrowDown size={13} className="text-cyan-400" />
                       ) : (
-                        <ArrowUp size={13} className="text-slate-400" />
+                        <ArrowUp size={13} className="text-amber-400" />
                       )}
                       <span className={`text-xs font-medium ${
-                        event.direction === 'download' ? 'text-orange-400' : 'text-slate-400'
+                        event.direction === 'download' ? 'text-cyan-400' : 'text-amber-400'
                       }`}>
                         {event.direction === 'download' ? 'Download' : 'Upload'}
                       </span>
@@ -219,6 +220,6 @@ export default function ThrottleLog() {
           </tbody>
         </table>
       </div>
-    </div>
+    </motion.div>
   )
 }

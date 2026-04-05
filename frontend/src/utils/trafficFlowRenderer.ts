@@ -118,9 +118,9 @@ function hexToRgba(hex: string, alpha: number): string {
 // ---------------------------------------------------------------------------
 
 const COLORS = {
-  downloadAccent: '#f59e0b',
-  uploadAccent: '#94a3b8',
-  nodeBg: '#18181b',
+  downloadAccent: '#06b6d4',
+  uploadAccent: '#f59e0b',
+  nodeBg: '#111113',
   nodeBorder: '#27272a',
   textPrimary: '#fafafa',
   textSecondary: '#a1a1aa',
@@ -606,12 +606,12 @@ export class TrafficFlowRenderer {
     ctx.fillStyle = COLORS.nodeBg
     ctx.fill()
 
-    // Gradient border (amber left, orange right)
+    // Gradient border (cyan left, blue right)
     ctx.save()
     roundedRect(ctx, n.x, n.y, n.w, n.h, 12)
     const grad = ctx.createLinearGradient(n.x, n.y, n.x + n.w, n.y)
-    grad.addColorStop(0, '#f59e0b')
-    grad.addColorStop(1, '#ea580c')
+    grad.addColorStop(0, '#06b6d4')
+    grad.addColorStop(1, '#0891b2')
     ctx.strokeStyle = grad
     ctx.lineWidth = 2
     ctx.stroke()
