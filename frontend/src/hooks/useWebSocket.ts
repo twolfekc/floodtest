@@ -71,6 +71,7 @@ export function useWebSocket() {
       try {
         const data = JSON.parse(event.data)
         setStats((prev: WsStats) => ({
+          ...EMPTY,
           ...data,
           events: [...(prev.events || []), ...(data.events || [])].slice(-100),
         }))

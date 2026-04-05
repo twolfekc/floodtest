@@ -49,7 +49,7 @@ The Go binary embeds the React frontend via `//go:embed all:frontend/dist` in `c
 
 ### Frontend (`frontend/src/`)
 
-React 18 + TypeScript SPA with dark Tailwind theme. Pages: Dashboard, Charts (Recharts), Schedule, Settings, Updates, ServerHealth. Real-time data via WebSocket hook (`useWebSocket.ts`). API client in `api/client.ts`.
+React 18 + TypeScript SPA with "Forge" dark theme (amber/orange palette). Responsive layout: fixed sidebar on desktop (`lg:`), collapsible hamburger menu on mobile. CSS animation system with glass morphism, gradient borders, shimmer effects. Pages: Dashboard (12 data panels + live sparkline), Charts, Schedule, Settings, Updates, ServerHealth. Real-time data via WebSocket hook (`useWebSocket.ts`). API client in `api/client.ts`. Icons: lucide-react.
 
 ### Data flow
 
@@ -73,7 +73,7 @@ Default port: **7860**. Settings persist in SQLite at `$DATA_DIR/wansaturator.db
 ## Testing
 
 ```bash
-go test -race ./...                    # Go unit tests (74 tests, ~1s)
+go test -race ./...                    # Go unit tests (~82 tests, ~1s)
 cd frontend && npx vitest run          # Frontend tests (12 tests, ~0.5s)
 cd e2e && npx playwright test          # E2E smoke tests (8 tests, needs built binary)
 ```
@@ -81,6 +81,8 @@ cd e2e && npx playwright test          # E2E smoke tests (8 tests, needs built b
 Test files use `db.OpenDB(":memory:")` for isolated in-memory SQLite — never use `db.Open()` in tests. Test packages: db, config, scheduler, stats, throttle, api, download.
 
 CI pipeline (`.github/workflows/build.yml`) runs all test tiers and gates Docker builds.
+
+**E2E gotcha**: The Launch Engine button uses CSS overlay divs (gradient, shimmer, glow) that prevent Playwright from computing accessible names via `getByRole`. Use `getByText` or test other elements instead. E2E tests navigate directly to pages (`/settings`, `/schedule`) rather than clicking sidebar links.
 
 ## Design Documents
 

@@ -49,6 +49,9 @@ function formatXAxis(timestamp: string, range: Range): string {
   if (range === '24h') {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
+  if (range === '7d') {
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', hour: 'numeric' })
+  }
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
@@ -180,7 +183,7 @@ export default function Charts() {
             </div>
             <div className="min-w-0">
               <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Avg Download</span>
-              <p className="text-lg font-mono font-bold text-cyan-400 truncate">{formatChartSpeed(avgDownload)}</p>
+              <p className="text-sm sm:text-lg font-mono font-bold text-cyan-400">{formatChartSpeed(avgDownload)}</p>
             </div>
           </div>
         </div>
@@ -192,7 +195,7 @@ export default function Charts() {
             </div>
             <div className="min-w-0">
               <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Avg Upload</span>
-              <p className="text-lg font-mono font-bold text-amber-400 truncate">{formatChartSpeed(avgUpload)}</p>
+              <p className="text-sm sm:text-lg font-mono font-bold text-amber-400">{formatChartSpeed(avgUpload)}</p>
             </div>
           </div>
         </div>
@@ -249,7 +252,7 @@ export default function Charts() {
                 tickFormatter={(ts) => formatXAxis(ts, range)}
                 stroke="#27272a"
                 tick={{ fill: '#71717a', fontSize: 12 }}
-                interval="preserveStartEnd"
+                minTickGap={50}
               />
               <YAxis
                 tickFormatter={yTickFormatter}
